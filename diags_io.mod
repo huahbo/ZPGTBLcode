@@ -1,4 +1,4 @@
-GFORTRAN module version '6' created from modulediags.F on Mon Sep  8 00:58:55 2014
+GFORTRAN module version '6' created from modulediags.F on Mon Sep  8 01:39:05 2014
 MD5:42aeb561eccb519fb91b260bb91c0009 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
