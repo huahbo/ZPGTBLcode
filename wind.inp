@@ -1,0 +1,21 @@
+ &inparams
+  maxiter=50000,
+  checkstep = -1,
+  output_flag=1,
+  binary_flag=1,
+ /
+ &dumps
+  ndump=100,
+  nplot=100,
+  nslice=100000,
+  ndiag=200,
+ /
+ &gridbounds
+   xl=0.0D0,
+   xr=31.5D0,
+   yl=0.0D0,
+   yr=3.0D0,
+   zl=0.0D0,
+   zr=3.0D0,
+ /
+

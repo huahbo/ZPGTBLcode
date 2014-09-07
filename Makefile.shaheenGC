@@ -1,0 +1,192 @@
+OBJ= modules.o main.o setupgrid.o \
+moduleles.o \
+modulediags.o \
+outflow.o \
+utils.o \
+lesdiags.o \
+lesgetT.o \
+lesinput.o \
+lesmpirecycle.o \
+lesmpiT.o \
+lesnonlinear.o \
+lesrecycleGC.o \
+lestensor.o \
+lesfilter.o \
+lesvwallGC.o \
+solveVelocity.o \
+solvePressure.o \
+spalding.o \
+linear.o    \
+nonlinear.o    \
+newdt.o \
+setboundaryvaluesst.o \
+fluidsolve.o \
+initfluid.o \
+winddriver.o \
+input.o \
+output.o  \
+outputdump.o \
+bdryexchange.o \
+xchange3D.o \
+hdf5_parfunc.o \
+hdf5_read_parfunc.o 
+
+
+DEBUG=
+LIST=
+HDF5_LIB=-L/opt/share/hdf5/1.8.5/bgp-ibm/lib -lhdf5 -lz
+HDF5_INCLUDE=-I/opt/share/hdf5/1.8.5/bgp-ibm/include
+
+#FFTW_LIB=${KSL_FFTW3_LIB}
+#FFTW_INCLUDE=${KSL_FFTW3_INC}
+
+FFTW_LIB=-L/home/wancheng/fftw333/install/lib -lfftw3 -lm
+FFTW_INCLUDE=-I/home/wancheng/fftw333/install/include
+
+
+#IBM
+F90= mpixlf90_r
+#FFLAGS= -c -qfixed -qcheck -qflttrap=enable:overflow:zerodivide:inexact -qlanglvl=2003pure -qxlf2003=nooldnaninf  -WF,-DDYNAMIC -WF,-DLES ${FFTW_INCLUDE} ${HDF5_INCLUDE}
+#FFLAGS= -c -qfixed -qcheck -u -WF,-DDYNAMIC -WF,-DPARALLELHDF5 -WF,-DPARALLEL -WF,-DLES ${FFTW_INCLUDE} ${HDF5_INCLUDE}
+##FFLAGS= -c -qfixed -qcheck -qflttrap=enable:overflow:zerodivide:inexact -WF,-DPARALLELHDF5 -WF,-DPARALLEL ${FFTW_INCLUDE} ${HDF5_INCLUDE} 
+#FFLAGS= -c -qfixed -qcheck -u -WF,-DDYNAMIC -WF,-DPARALLEL -WF,-DLES -WF,-DYPERIODIC -WF,-DCODEA ${FFTW_INCLUDE} ${HDF5_INCLUDE}
+
+FFLAGS= -qfixed -qarch=450d -qtune=450 -c -O -WF,-DDYNAMIC -WF,-DPARALLEL -WF,-DLES -WF,-DYPERIODIC -WF,-DCODEA -WF,-DPARALLELHDF5 ${FFTW_INCLUDE} ${HDF5_INCLUDE}
+#FFLAGS= -c -qfixed -qcheck -qflttrap=enable:overflow:zerodivide:inexact -WF,-DDYNAMIC -WF,-DPARALLEL -WF,-DLES -WF,-DYPERIODIC -WF,-DCODEA -WF,-DPARALLELHDF5 ${FFTW_INCLUDE} ${HDF5_INCLUDE}
+
+
+all: a.out
+
+a.out: ${OBJ}
+#	${F90} -g  ${OBJ}  -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz  -L/usr/lib -lz
+	${F90} -g  ${OBJ} ${FFTW_LIB} ${HDF5_LIB}
+ 
+
+
+bdryexchange.o:bdryexchange.F
+	 ${F90}  ${FFLAGS} bdryexchange.F
+
+blasius.o:blasius.F
+	 ${F90}  ${FFLAGS} blasius.F
+
+diags.o:diags.F
+	 ${F90}  ${FFLAGS} diags.F
+
+fluidsolve.o:fluidsolve.F
+	 ${F90}  ${FFLAGS} fluidsolve.F
+
+hdf5_func.o: hdf5_func.c
+	gcc -c ${HDF5_INCLUDE}  -DH5_USE_16_API hdf5_func.c
+
+hdf5_parfunc.o: hdf5_parfunc.c
+	mpixlc -c ${HDF5_INCLUDE} -DH5_USE_16_API  hdf5_parfunc.c
+
+hdf5_read_parfunc.o:hdf5_read_parfunc.c
+	mpixlc -c ${HDF5_INCLUDE} -DH5_USE_16_API hdf5_read_parfunc.c  
+
+initfluid.o:initfluid.F
+	 ${F90}  ${FFLAGS} initfluid.F
+
+initsolid.o:initsolid.F
+	 ${F90}  ${FFLAGS} initsolid.F
+
+input.o:input.F
+	 ${F90}  ${FFLAGS} input.F
+
+lesdiags.o:lesdiags.F
+	 ${F90}  ${FFLAGS} lesdiags.F
+
+lesgetT.o:lesgetT.F
+	 ${F90}  ${FFLAGS} lesgetT.F
+
+lesinput.o:lesinput.F
+	 ${F90}  ${FFLAGS} lesinput.F
+
+lesmpirecycle.o:lesmpirecycle.F
+	 ${F90}  ${FFLAGS} lesmpirecycle.F
+
+lesmpiT.o:lesmpiT.F
+	 ${F90}  ${FFLAGS} lesmpiT.F
+
+lesnonlinear.o:lesnonlinear.F
+	 ${F90}  ${FFLAGS} lesnonlinear.F
+
+lesrecycleGC.o:lesrecycleGC.F
+	 ${F90}  ${FFLAGS} lesrecycleGC.F
+
+lestensor.o:lestensor.F
+	 ${F90}  ${FFLAGS} lestensor.F
+
+lesfilter.o:lesfilter.F
+	 ${F90}  ${FFLAGS} lesfilter.F
+
+lesvwallGC.o:lesvwallGC.F
+	 ${F90}  ${FFLAGS} lesvwallGC.F
+
+linear.o:linear.F
+	 ${F90}  ${FFLAGS} linear.F
+
+main.o:main.F
+	 ${F90}  ${FFLAGS} main.F
+
+modules.o:modules.F
+	 ${F90}  ${FFLAGS} modules.F
+
+moduleles.o:moduleles.F
+	 ${F90}  ${FFLAGS} moduleles.F
+
+modulediags.o:modulediags.F
+	 ${F90}  ${FFLAGS} modulediags.F
+
+newdt.o:newdt.F
+	 ${F90}  ${FFLAGS} newdt.F
+
+nonlinear.o:nonlinear.F
+	 ${F90}  ${FFLAGS} nonlinear.F
+
+outflow.o:outflow.F
+	 ${F90}  ${FFLAGS} outflow.F
+
+output.o:output.F
+	 ${F90}  ${FFLAGS} output.F
+
+outputdump.o:outputdump.F
+	 ${F90}  ${FFLAGS} outputdump.F
+
+setboundaryvaluesst.o:setboundaryvaluesst.F
+	 ${F90}  ${FFLAGS} setboundaryvaluesst.F
+
+setupgrid.o:setupgrid.F
+	 ${F90}  ${FFLAGS} setupgrid.F
+
+solvePressure.o:solvePressure.F
+	 ${F90}  ${FFLAGS} solvePressure.F
+
+solveVelocity.o:solveVelocity.F
+	 ${F90}  ${FFLAGS} solveVelocity.F
+
+spalding.o:spalding.F
+	 ${F90}  ${FFLAGS} spalding.F 
+
+utils.o:utils.F
+	 ${F90}  ${FFLAGS} utils.F
+
+vorticity.o:vorticity.F
+	 ${F90}  ${FFLAGS} vorticity.F
+
+winddriver.o:winddriver.F
+	 ${F90}  ${FFLAGS} winddriver.F
+
+windturbine.o:windturbine.F
+	 ${F90}  ${FFLAGS} windturbine.F
+
+xchange3D.o:xchange3D.F
+	${F90}  ${FFLAGS} xchange3D.F
+
+clean:
+	rm -f ${OBJ} *.mod *.out
+
+
+renew:
+	touch *
+

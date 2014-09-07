@@ -1,0 +1,220 @@
+OBJ= modules.o main.o setupgrid.o \
+moduleles.o \
+modulediags.o \
+utils.o \
+outflow.o \
+lesdiags.o \
+lesgetT.o \
+lesinput.o \
+lesmpirecycle.o \
+lesmpiT.o \
+lesnonlinear.o \
+lesrecycle.o \
+lestensor.o \
+lesfilter.o \
+lesvwall.o \
+blasius.o \
+solveVelocity.o \
+solvePressure.o \
+spalding.o \
+linear.o    \
+nonlinear.o    \
+newdt.o \
+setboundaryvaluesst.o \
+fluidsolve.o \
+initfluid.o \
+winddriver.o \
+output.o  \
+outputdump.o \
+bdryexchange.o \
+xchange3D.o \
+hdf5_func.o 
+
+DEBUG=
+LIST=
+
+#gfortran flags
+HDF5HOME=${HOME}/hdf5-1.6.10/hdf5
+HDF5LIB=${HDF5HOME}/lib
+HDF5INC=${HDF5HOME}/include
+
+SZIPHOME=${HOME}/szip-2.1/szip
+SZIPLIB=${SZIPHOME}/lib
+SZIPINC=${SZIPHOME}/include
+
+SILOHOME=${HOME}/silo-4.7.2
+SILOINC=${SILOHOME}/include
+SILOLIB=${SILOHOME}/lib
+
+FFTWHOME=/mnt/kaustapps/fftw/3.2.2
+FFTWLIB=${FFTWHOME}/lib
+FFTWINC=${FFTWHOME}/include
+
+F90= gfortran -mcmodel=medium
+
+#FFLAGS= -c -DDYNAMIC -DTWO_D -DSILO -g -frange-check -fimplicit-none -ffpe-trap=zero,overflow -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+
+FFLAGS= -c -Wall -DLES  -DDYNAMIC -DSILO -g -frange-check -fimplicit-none -ffpe-trap=zero,overflow -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+FFLAGS= -c -DLES -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+FFLAGS= -c -Wall -DLES  -DDYNAMIC -DSILO -g -frange-check -fimplicit-none -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+
+FFLAGS= -c -Wall -DLES  -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+FFLAGS= -c -DLES -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+
+FFLAGS= -c -Wall -Wno-unused-variable -DLES -DCODEB -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+#FFLAGS= -c -DLES -DCODEB -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+
+F90= gfortran -mcmodel=medium
+CC= egcs
+
+
+all: a.out
+
+a.out: ${OBJ}
+#	${F90} -g  ${OBJ}  -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz  -L/usr/lib -lz
+#	${F90} -g  ${OBJ} -L${SILOLIB} -lsiloh5 -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz -L${FFTWLIB} -L/usr/lib64 -lz
+	${F90} -g  ${OBJ} -L${SILOLIB} -lsiloh5 -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz -L${FFTWLIB} -lfftw3 -L/usr/lib64 -lz
+
+
+#
+# file list
+
+bdryexchange.o:bdryexchange.F
+	 ${F90}  ${FFLAGS} bdryexchange.F
+
+blasius.o:blasius.F
+	 ${F90}  ${FFLAGS} blasius.F
+
+diags.o:diags.F
+	 ${F90}  ${FFLAGS} diags.F
+
+exchangeCellCenterTij.o:exchangeCellCenterTij.F
+	 ${F90}  ${FFLAGS} exchangeCellCenterTij.F
+
+exchangerecycle.o:exchangerecycle.F
+	 ${F90}  ${FFLAGS} exchangerecycle.F
+
+fluidsolve.o:fluidsolve.F
+	 ${F90}  ${FFLAGS} fluidsolve.F
+
+hdf5_func.o: hdf5_func.c
+	gcc -c -I${HDF5INC}  -DH5_USE_16_API hdf5_func.c
+
+hdf5_parfunc.o: hdf5_parfunc.c
+	mpicc -c -I${HDF5INC} -I${MPIINC}  hdf5_parfunc.c
+
+hdf5_read_parfunc.o:hdf5_read_parfunc.c
+	mpicc -c -I${HDF5INC} -I${MPIINC}  hdf5_read_parfunc.c  
+
+initfluid.o:initfluid.F
+	 ${F90}  ${FFLAGS} initfluid.F
+
+initsolid.o:initsolid.F
+	 ${F90}  ${FFLAGS} initsolid.F
+
+input.o:input.F
+	 ${F90}  ${FFLAGS} input.F
+
+lesdiags.o:lesdiags.F
+	 ${F90}  ${FFLAGS} lesdiags.F
+
+lesgetT.o:lesgetT.F
+	 ${F90}  ${FFLAGS} lesgetT.F
+
+lesinput.o:lesinput.F
+	 ${F90}  ${FFLAGS} lesinput.F
+
+lesmpirecycle.o:lesmpirecycle.F
+	 ${F90}  ${FFLAGS} lesmpirecycle.F
+
+lesmpiT.o:lesmpiT.F
+	 ${F90}  ${FFLAGS} lesmpiT.F
+
+lesnonlinear.o:lesnonlinear.F
+	 ${F90}  ${FFLAGS} lesnonlinear.F
+
+lesrecycle.o:lesrecycle.F
+	 ${F90}  ${FFLAGS} lesrecycle.F
+
+lestensor.o:lestensor.F
+	 ${F90}  ${FFLAGS} lestensor.F
+
+lesfilter.o:lesfilter.F
+	 ${F90}  ${FFLAGS} lesfilter.F
+
+lesvwall.o:lesvwall.F
+	 ${F90}  ${FFLAGS} lesvwall.F
+
+linear.o:linear.F
+	 ${F90}  ${FFLAGS} linear.F
+
+main.o:main.F
+	 ${F90}  ${FFLAGS} main.F
+
+modules.o:modules.F
+	 ${F90}  ${FFLAGS} modules.F
+
+moduleles.o:moduleles.F
+	 ${F90}  ${FFLAGS} moduleles.F
+
+modulediags.o:modulediags.F
+	 ${F90}  ${FFLAGS} modulediags.F
+
+newdt.o:newdt.F
+	 ${F90}  ${FFLAGS} newdt.F
+
+nonlinear.o:nonlinear.F
+	 ${F90}  ${FFLAGS} nonlinear.F
+
+outflow.o:outflow.F
+	 ${F90}  ${FFLAGS} outflow.F
+
+output.o:output.F
+	 ${F90}  ${FFLAGS} output.F
+
+outputdump.o:outputdump.F
+	 ${F90}  ${FFLAGS} outputdump.F
+
+setboundaryvaluesst.o:setboundaryvaluesst.F
+	 ${F90}  ${FFLAGS} setboundaryvaluesst.F
+
+setrecycleinflow.o:setrecycleinflow.F
+	 ${F90}  ${FFLAGS} setrecycleinflow.F
+
+setupgrid.o:setupgrid.F
+	 ${F90}  ${FFLAGS} setupgrid.F
+
+solvePressure.o:solvePressure.F
+	 ${F90}  ${FFLAGS} solvePressure.F
+
+solveVelocity.o:solveVelocity.F
+	 ${F90}  ${FFLAGS} solveVelocity.F
+
+spalding.o:spalding.F	
+	 ${F90}  ${FFLAGS} spalding.F
+
+utils.o:utils.F
+	 ${F90}  ${FFLAGS} utils.F
+
+vorticity.o:vorticity.F
+	 ${F90}  ${FFLAGS} vorticity.F
+
+winddriver.o:winddriver.F
+	 ${F90}  ${FFLAGS} winddriver.F
+
+windturbine.o:windturbine.F
+	 ${F90}  ${FFLAGS} windturbine.F
+
+xchange3D.o:xchange3D.F
+	${F90}  ${FFLAGS} xchange3D.F
+
+
+
+
+clean:
+	rm -f ${OBJ} *.mod *.out
+
+
+renew:
+	touch *
+
