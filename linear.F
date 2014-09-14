@@ -22,9 +22,8 @@ c     Original source.
 c
 c     Wind code: Incompressible Navier-Stokes LES
 c
-c-----------------------------------------------------------------
        subroutine  ComputeLinearTerms(Lu,gradp,ux,uxp,Adu,px,
-     &                                alpha,beta,dt,timestep,substep )  !ComputeLinearSolidTerms(ux,uxp,Adu, alpha,beta,dt,timestep,substep)  ! Lu, gradp, px, alpha, beta not required...
+     &                                alpha,beta,dt,timestep,substep )
 c-----------------------------------------------------------------
        use mesh
        use mesh_common
@@ -40,22 +39,22 @@ c-----------------------------------------------------------------
 c
        implicit none
 c=======Declarations=========
-       double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)  !sux
-       double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI) !Remove
+       double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI)
        double precision:: dt
 c
 #ifndef TWO_D
-       double precision:: Adu(nxlocal+1,nylocal+1,nzlocal+1,nvar) !sAdu
-       double precision:: Lu(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!sLu
-       double precision:: gradp(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!gradsp
+       double precision:: Adu(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Lu(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: gradp(nxlocal+1,nylocal+1,nzlocal+1,nvar)
 #else
-       double precision:: Adu(nxlocal+1,nylocal,nzlocal+1,nvar)!sAdu
-       double precision:: Lu(nxlocal+1,nylocal,nzlocal+1,nvar) !sLu
-       double precision:: gradp(nxlocal+1,nylocal,nzlocal+1,nvar) !gradsp
+       double precision:: Adu(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Lu(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: gradp(nxlocal+1,nylocal,nzlocal+1,nvar)
 #endif
 c
-       double precision:: uxp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)  !suxp
-       double precision:: utmp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar) !sutmp
+       double precision:: uxp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: utmp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
 c
 c     
        double precision:: alpha,beta
@@ -63,13 +62,13 @@ c
        double precision:: divu(nxlocal,nylocal,nzlocal)
 c
 #ifndef TWO_D
-       double precision:: Rhsu(1:nxlocal+1,nylocal+1,nzlocal+1,3)	!Rhssu
-       double precision:: uu(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)	!suu
-       double precision:: press(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)	!spress
+       double precision:: Rhsu(1:nxlocal+1,nylocal+1,nzlocal+1,3)
+       double precision:: uu(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)
+       double precision:: press(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)
 #else
-       double precision:: Rhsu(1:nxlocal+1,nylocal,nzlocal+1,3)		!Rhssu
-       double precision:: uu(-2:nxlocal+3,nylocal,-2:nzlocal+3,3)	!suu
-       double precision:: press(-2:nxlocal+3,nylocal,-2:nzlocal+3)	!spress
+       double precision:: Rhsu(1:nxlocal+1,nylocal,nzlocal+1,3)
+       double precision:: uu(-2:nxlocal+3,nylocal,-2:nzlocal+3,3)
+       double precision:: press(-2:nxlocal+3,nylocal,-2:nzlocal+3)
 #endif
 
 c
@@ -85,14 +84,14 @@ c
        uu=0.D0
        Rhsu = 0.d0
 c
-       call SetboundaryValuesST(ux)	!(sux)
-       call exchange(ux,3)	!(sux,3)
+       call SetboundaryValuesST(ux)
+       call exchange(ux,3)
 c     Solve x-momentum equation
 c     u-velocity rhs
        do k=1,nzlocal,1
           do j=1,nylocal,1
              do i=1,nxlocal+1,1
-                lap=(cc*(ux(i-2,j,k,1)+ux(i+2,j,k,1))+  !Remove lap as no linear term in (3)
+                lap=(cc*(ux(i-2,j,k,1)+ux(i+2,j,k,1))+
      &               aa*(ux(i-1,j,k,1)+ux(i+1,j,k,1))
      &               +bb*ux(i,j,k,1))*dxi*dxi+
 #ifndef TWO_D
@@ -104,7 +103,7 @@ c     u-velocity rhs
      &               aa*(ux(i,j,k-1,1)+ux(i,j,k+1,1))
      &               +bb*ux(i,j,k,1))*dzi*dzi
                 Rhsu(i,j,k,1)=ux(i,j,k,1)
-     &               +dt*alpha/Reynolds*lap-dt*Adu(i,j,k,1) !Rhsu(i,j,k,1)=ux(i,j,k,1)-dt*Adu(i,j,k,1)  !!! Why minus,-(dt*...)Adu???? 
+     &               +dt*alpha/Reynolds*lap-dt*Adu(i,j,k,1)
 c     Initial guess for uu
                 uu(i,j,k,1)=ux(i,j,k,1)
              enddo
@@ -115,7 +114,7 @@ c     v-velocity rhs
        do k=1,nzlocal,1
           do j=1,nylocal+1,1
              do i=1,nxlocal,1
-                lap=(cc*(ux(i-2,j,k,2)+ux(i+2,j,k,2))+ !Remove lap as no linear term in (3)
+                lap=(cc*(ux(i-2,j,k,2)+ux(i+2,j,k,2))+
      &               aa*(ux(i-1,j,k,2)+ux(i+1,j,k,2))
      &               +bb*ux(i,j,k,2))*dxi*dxi+
      &               (cc*(ux(i,j-2,k,2)+ux(i,j+2,k,2))+
@@ -125,7 +124,7 @@ c     v-velocity rhs
      &               aa*(ux(i,j,k-1,2)+ux(i,j,k+1,2))
      &               +bb*ux(i,j,k,2))*dzi*dzi
                 Rhsu(i,j,k,2)=ux(i,j,k,2)
-     &               +dt*alpha/Reynolds*lap-dt*Adu(i,j,k,2) !Rhsu(i,j,k,2)=ux(i,j,k,2)-dt*Adu(i,j,k,2)
+     &               +dt*alpha/Reynolds*lap-dt*Adu(i,j,k,2)
 c     Initial guess for uu
                 uu(i,j,k,2)=ux(i,j,k,2)
              enddo
@@ -136,7 +135,7 @@ c     w-velocity rhs
        do k=1,nzlocal+1,1
           do j=1,nylocal,1
              do i=1,nxlocal,1
-                lap=(cc*(ux(i-2,j,k,3)+ux(i+2,j,k,3))+ !Remove lap as no linear term in (3)
+                lap=(cc*(ux(i-2,j,k,3)+ux(i+2,j,k,3))+
      &               aa*(ux(i-1,j,k,3)+ux(i+1,j,k,3))
      &               +bb*ux(i,j,k,3))*dxi*dxi+
 #ifndef TWO_D
@@ -148,7 +147,7 @@ c     w-velocity rhs
      &               aa*(ux(i,j,k-1,3)+ux(i,j,k+1,3))
      &               +bb*ux(i,j,k,3))*dzi*dzi
                 Rhsu(i,j,k,3)=ux(i,j,k,3)
-     &               +dt*alpha/Reynolds*lap-dt*Adu(i,j,k,3) ! Rhsu(i,j,k,3)=ux(i,j,k,3)-dt*Adu(i,j,k,3)
+     &               +dt*alpha/Reynolds*lap-dt*Adu(i,j,k,3)
 c     Initial guess for uu
                 uu(i,j,k,3)=ux(i,j,k,3)
              enddo
@@ -167,7 +166,7 @@ c#ifdef LES
 #endif
 c-------------------------------------------------
 c
-       call SolveHelmholtz(uu,Rhsu,beta*dt/Reynolds)	!Remove and Replace to Solve force terms !!!call SolveDrag(uu_s, uu, dia) , alpha_f ==1???, fluid density ???, fluid viscosity ???, or Reynold Number of Flow*alpha_f???
+       call SolveHelmholtz(uu,Rhsu,beta*dt/Reynolds)
 c        write(*,*) uu(1,1,1,1), uu(2,1,1,1), uu(3,1,1,1)
 c
        uxp(1:nxlocal+1,1:nylocal,1:nzlocal,1)=
@@ -181,19 +180,19 @@ c
        uxp(1:nxlocal,1:nylocal,1:nzlocal+1,3)=
      &      uu(1:nxlocal,1:nylocal,1:nzlocal+1,3)
 
-       call SetboundaryValuesST(uxp)		! ???
-       call exchange(uxp,3)			! ???
+       call SetboundaryValuesST(uxp)
+       call exchange(uxp,3)
 c
-       call computeLu(Lu,ux,uxp,alpha,beta)	!Remove as computes linear part of Eq3 and Replace to Solve force terms
+       call computeLu(Lu,ux,uxp,alpha,beta)
 c
 c       call SetPressureBC(ux,uxp,Lu,Adu,dt)
 c     
 c     Now compute the divergence of uu and use that as rhs for
 c     the pressure poisson solver
-       call DivergenceVelocity(divu,uxp)   !Remove as Eq 13 (RHS) is not there for Solid Phase
+       call DivergenceVelocity(divu,uxp)
 c       call WriteHDF5Filedivu(divu,1)
 c
-       press=0.D0 !Remove
+       press=0.D0
 #ifndef TWO_D
 c       press(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3) =
 c     &    px(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)
@@ -203,8 +202,7 @@ c     &    px(-2:nxlocal+3,nylocal,-2:nzlocal+3)
 #endif
 
 c
-       call SolvePressure(press,divu)	!Remove as Eq 13 is not there for Solid Phase
-c       call WriteHDF5Filedivu(divu,1)
+       call SolvePressure(press,divu)
 c
 #ifndef TWO_D
 c          px(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3) =
@@ -218,12 +216,272 @@ c     & press(-2:nxlocal+3,nylocal,-2:nzlocal+3)
 
 c
 #ifdef LES
-       call les_dpdx(press) !Remove this it is gradient of pressure at the boundary (virtual Wall). Also in Eq 14 (RHS) is not there for Solid Phase
+       call les_dpdx(press)
 #endif
-       call CorrectVelocity(uxp,gradp,press) !Replace this as in Eq 14, (RHS) Pressure Gradient is not there for Solid Phase, But Force terms like drag and electric forces..
+       call CorrectVelocity(uxp,gradp,press)
 c
        return
        end subroutine ComputeLinearTerms
+
+c-----------------------------------------------------------------
+       !subroutine  ComputeLinearTerms(Lu,gradp,ux,uxp,Adu,px,
+       !&                                alpha,beta,dt,timestep,substep )  !ComputeLinearSolidTerms(ux,uxp,Adu, alpha,beta,dt,timestep,substep)  ! Lu, gradp, px, alpha, beta not required... uxp is the intermediate velocity
+       !subroutine  ComputeLinearSolidTerms(ux,uxp,Adu,ux_s,uxp_s,Adu_s,  !! No need: ux_s,uxp_s,Adu_s
+       !&                         sdt,timestep,substep)
+       subroutine  ComputeLinearTermsSolid(uxp_s,ux_s,Adu_s,  !! No need: ux_s,uxp_s,Adu_s
+       &                         dt,timestep,substep)       
+c-----------------------------------------------------------------
+       use mesh
+       use mesh_common
+       use properties
+#ifdef LES
+       use virtualwallBC
+#endif
+#ifdef PARALLEL
+       use mpistuff
+#endif
+       use VelocityFieldSolver
+       use PressureFieldSolver
+c
+       implicit none
+c=======Declarations=========
+       !double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)  !sux
+       !double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI) !Remove
+       double precision:: dt
+       
+       !For Solid Phase
+       double precision:: ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar,nspecis_s)  !or sux, also one more paramter of sand speciese number ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar, speciesNumber)        
+       
+c
+!#ifndef TWO_D
+!       double precision:: Adu(nxlocal+1,nylocal+1,nzlocal+1,nvar) !Check if Required !!!
+!       double precision:: Lu(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!Check if Required !!!
+!       double precision:: gradp(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!Check if Required !!!
+!#else
+!       double precision:: Adu(nxlocal+1,nylocal,nzlocal+1,nvar)!Check if Required !!!
+!       double precision:: Lu(nxlocal+1,nylocal,nzlocal+1,nvar) !
+!       double precision:: gradp(nxlocal+1,nylocal,nzlocal+1,nvar) !
+!#endif
+
+
+#ifndef TWO_D
+       double precision:: Adu_s(nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s) !or sAdu
+       !double precision:: Lu_s(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!or sLu
+       !double precision:: gradp_s(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!or gradsp
+#else
+       double precision:: Adu_s(nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s)!or sAdu
+       !double precision:: Lu_s(nxlocal+1,nylocal,nzlocal+1,nvar) !or sLu
+       !double precision:: gradp_s(nxlocal+1,nylocal,nzlocal+1,nvar) !or gradsp
+#endif
+
+c 
+       !double precision:: uxp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)  !Check if Required !!!
+       !double precision:: utmp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar) !Check if Required !!!
+c
+c   !For Solid Phase
+       double precision:: uxp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)  !suxp
+       !double precision:: utmp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar) !sutmp
+
+c     
+       !double precision:: alpha,beta  !beta required; alpha Not required
+c
+       !double precision:: divu(nxlocal,nylocal,nzlocal)
+c
+!#ifndef TWO_D
+!       double precision:: Rhsu(1:nxlocal+1,nylocal+1,nzlocal+1,3)	!Check if Required !!!
+!       double precision:: uu(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)	!Check if Required !!!
+!       double precision:: press(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)	!spress
+!#else
+!       double precision:: Rhsu(1:nxlocal+1,nylocal,nzlocal+1,3)		!Rhssu
+!       double precision:: uu(-2:nxlocal+3,nylocal,-2:nzlocal+3,3)	!suu
+!       double precision:: press(-2:nxlocal+3,nylocal,-2:nzlocal+3)	!spress
+!#endif
+
+c   !For Solid Phase
+#ifndef TWO_D
+       !!double precision:: Rhsu_s(1:nxlocal+1,nylocal+1,nzlocal+1,3)	!or Rhssu
+       !double precision:: uu_s(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)	!suu
+       !!double precision:: press_s(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)	!spress
+#else
+       !!double precision:: Rhsu_s(1:nxlocal+1,nylocal,nzlocal+1,3)		!Rhssu
+       !double precision:: uu_s(-2:nxlocal+3,nylocal,-2:nzlocal+3,3)	!suu
+       !!double precision:: press_s(-2:nxlocal+3,nylocal,-2:nzlocal+3)	!spress
+#endif
+c
+c       double precision:: pbdry(nxlocal,nylocal)
+c     
+       integer:: i,j,k, timestep, substep
+       !double precision:: aa,bb,cc
+       !double precision:: lap
+c
+       !aa=16.D0/12.D0
+       !bb=-30.D0/12.D0
+       !cc=-1.D0/12.D0
+       !uu=0.D0
+       !Rhsu = 0.d0
+c
+       call SetboundaryValuesST(ux_s)	!(sux)
+       call exchange(ux_s,3)	!(sux,3)
+c     Solve x-momentum equation
+c     u-velocity rhs
+    do snumb_s =1,nspecis_s,1
+       do k=1,nzlocal,1
+          do j=1,nylocal,1
+             do i=1,nxlocal+1,1
+                !lap=(cc*(ux(i-2,j,k,1)+ux(i+2,j,k,1))+  !Remove lap as no linear term in (3)
+     !&               aa*(ux(i-1,j,k,1)+ux(i+1,j,k,1))
+     !&               +bb*ux(i,j,k,1))*dxi*dxi+
+!#ifndef TWO_D
+     !&               (cc*(ux(i,j-2,k,1)+ux(i,j+2,k,1))+
+     !&               aa*(ux(i,j-1,k,1)+ux(i,j+1,k,1))
+     !&               +bb*ux(i,j,k,1))*dyi*dyi+
+!#endif
+     !&               (cc*(ux(i,j,k-2,1)+ux(i,j,k+2,1))+
+     !&               aa*(ux(i,j,k-1,1)+ux(i,j,k+1,1))
+     !&               +bb*ux(i,j,k,1))*dzi*dzi
+                uxp_s(i,j,k,1,snumb_s)=ux_s(i,j,k,1,snumb_s)    !+dt*alpha/Reynolds*lap
+     &               -dt*Adu(i,j,k,1,snumb_s) !Rhsu(i,j,k,1)=ux(i,j,k,1)-dt*Adu(i,j,k,1)  !!! Why minus,-(dt*...)Adu???? 
+c     Initial guess for uu
+                !uu(i,j,k,1)=ux(i,j,k,1)
+             enddo
+          enddo
+       enddo
+#ifndef TWO_D
+c     v-velocity rhs
+       do k=1,nzlocal,1
+          do j=1,nylocal+1,1
+             do i=1,nxlocal,1
+                !lap=(cc*(ux(i-2,j,k,2)+ux(i+2,j,k,2))+ !Remove lap as no linear term in (3)
+     !&               aa*(ux(i-1,j,k,2)+ux(i+1,j,k,2))
+     !&               +bb*ux(i,j,k,2))*dxi*dxi+
+     !&               (cc*(ux(i,j-2,k,2)+ux(i,j+2,k,2))+
+     !&               aa*(ux(i,j-1,k,2)+ux(i,j+1,k,2))
+     !&               +bb*ux(i,j,k,2))*dyi*dyi+
+     !&               (cc*(ux(i,j,k-2,2)+ux(i,j,k+2,2))+
+     !&               aa*(ux(i,j,k-1,2)+ux(i,j,k+1,2))
+     !&               +bb*ux(i,j,k,2))*dzi*dzi
+                uxp_s(i,j,k,2,snumb_s)=ux_s(i,j,k,2,snumb_s)  	!+dt*alpha/Reynolds*lap
+     &               -dt*Adu_s(i,j,k,2,snumb_s) !Rhsu(i,j,k,2)=ux(i,j,k,2)-dt*Adu(i,j,k,2)
+c     Initial guess for uu
+                !uu(i,j,k,2)=ux(i,j,k,2)
+             enddo
+          enddo
+       enddo
+#endif
+c     w-velocity rhs
+       do k=1,nzlocal+1,1
+          do j=1,nylocal,1
+             do i=1,nxlocal,1
+                !lap=(cc*(ux(i-2,j,k,3)+ux(i+2,j,k,3))+ !Remove lap as no linear term in (3)
+     !&               aa*(ux(i-1,j,k,3)+ux(i+1,j,k,3))
+     !&               +bb*ux(i,j,k,3))*dxi*dxi+
+!#ifndef TWO_D
+     !&               (cc*(ux(i,j-2,k,3)+ux(i,j+2,k,3))+
+     !&               aa*(ux(i,j-1,k,3)+ux(i,j+1,k,3))
+     !&               +bb*ux(i,j,k,3))*dyi*dyi+
+!#endif
+     !&               (cc*(ux(i,j,k-2,3)+ux(i,j,k+2,3))+
+     !&               aa*(ux(i,j,k-1,3)+ux(i,j,k+1,3))
+     !&               +bb*ux(i,j,k,3))*dzi*dzi
+                uxp_s(i,j,k,3,snumb_s)=ux(i,j,k,3,snumb_s)   !+dt*alpha/Reynolds*lap
+     &               -dt*Adu(i,j,k,3,snumb_s) ! Rhsu(i,j,k,3)=ux(i,j,k,3)-dt*Adu(i,j,k,3)
+c     Initial guess for uu
+                !uu(i,j,k,3)=ux(i,j,k,3)    !Not Required
+             enddo
+          enddo
+       enddo
+    enddo
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! OR       
+    do snumb_s =1,nspecis_s,1
+       do 123 udir = 1,3,1
+#ifdef TWO_D    
+       if udir .eq. 2 then 
+       goto 123
+       endif
+#endif
+          do k=1,nzlocal,1
+             do j=1,nylocal,1
+                do i=1,nxlocal+1,1
+                   uxp_s(i,j,k,udir,snumb_s)=ux_s(i,j,k,udir,snumb_s)    
+     &               -dt*Adu(i,j,k,udir,snumb_s) 
+                enddo
+123          continue                
+             !enddo
+          enddo
+      
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+       
+       
+c
+c       write(6,*) 'RHSU 2',maxval(Rhsu(:,:,:,2)),minval(Rhsu(:,:,:,2))
+c       write(6,*) 'UU',maxval(uu(:,:,:,2))
+c       write(6,*) 'ADU',maxval(adu(:,:,:,2))
+c-----------------------------------les part
+c setting boundary 
+c#ifdef LES
+#ifdef LES
+       !utmp = ux
+       !call les_virtualwall(utmp,timestep,substep)    !consider later
+#endif
+c-------------------------------------------------
+c
+       !call SolveHelmholtz(uu,Rhsu,beta*dt/Reynolds)	!Remove 
+c        write(*,*) uu(1,1,1,1), uu(2,1,1,1), uu(3,1,1,1)
+c
+       !uxp(1:nxlocal+1,1:nylocal,1:nzlocal,1)=		!Remove 
+     !&      uu(1:nxlocal+1,1:nylocal,1:nzlocal,1)
+!#ifndef TWO_D
+       !uxp(1:nxlocal,1:nylocal+1,1:nzlocal,2)=
+     !&      uu(1:nxlocal,1:nylocal+1,1:nzlocal,2)
+!#else
+       !uxp(1:nxlocal,1:nylocal,1:nzlocal,2)=0.D0
+!#endif
+       !uxp(1:nxlocal,1:nylocal,1:nzlocal+1,3)=
+     !&      uu(1:nxlocal,1:nylocal,1:nzlocal+1,3)
+
+       call SetboundaryValuesST(uxp_s)		! ???LATER
+       call exchange(uxp_s,3)			! ???LATER
+c
+       !call computeLu(Lu,ux,uxp,alpha,beta)	!Remove as computes linear part of Eq3 and Of no use in fluid phase also...
+c
+c       call SetPressureBC(ux,uxp,Lu,Adu,dt)
+c     
+c     Now compute the divergence of uu and use that as rhs for
+c     the pressure poisson solver
+       !call DivergenceVelocity(divu,uxp)   !Remove as Eq 13 (RHS) is not there for Solid Phase
+c       call WriteHDF5Filedivu(divu,1)
+c
+       !press=0.D0 !Remove
+!#ifndef TWO_D
+c       press(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3) =
+c     &    px(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)
+!#else
+c       press(-2:nxlocal+3,nylocal,-2:nzlocal+3) =
+c     &    px(-2:nxlocal+3,nylocal,-2:nzlocal+3)
+!#endif
+
+c
+       !call SolvePressure(press,divu)	!Remove as Eq 13 is not there for Solid Phase
+c       call WriteHDF5Filedivu(divu,1)
+c
+!#ifndef TWO_D
+c          px(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3) =
+c     & press(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3)
+!#else
+c          px(-2:nxlocal+3,nylocal,-2:nzlocal+3) =
+c     & press(-2:nxlocal+3,nylocal,-2:nzlocal+3)
+!#endif
+
+
+
+c
+#ifdef LES
+       !call les_dpdx(press) !!!Work LATER for solid inflow, this it is gradient of pressure at the boundary (virtual Wall). Also in Eq 14 (RHS) is not there for Solid Phase
+#endif
+       !call CorrectVelocity(uxp,gradp,press) !Replace this as in Eq 14, (RHS) Pressure Gradient is not there for Solid Phase, But Force terms like drag and electric forces..
+c
+       return
+       end subroutine ComputeLinearTermsSolid
 c
 c-----------------------------------------------------------------------
        subroutine CorrectVelocity(uu,gradp,press)
@@ -265,7 +523,7 @@ c
              do k=1,nzlocal,1
                 gradp(i,j,k,1)=aa*(press(i,j,k)-press(i-1,j,k))*dxi+
      &               bb*(press(i+1,j,k)-press(i-2,j,k))*dxi3
-                uu(i,j,k,1)=uu(i,j,k,1)-gradp(i,j,k,1)
+                uu(i,j,k,1)=uu(i,j,k,1)-gradp(i,j,k,1)	
              enddo
           enddo
        enddo
@@ -275,7 +533,7 @@ c
              do k=1,nzlocal,1
                 gradp(i,j,k,2)=aa*(press(i,j,k)-press(i,j-1,k))*dyi+
      &               bb*(press(i,j+1,k)-press(i,j-2,k))*dyi3
-                uu(i,j,k,2)=uu(i,j,k,2)-gradp(i,j,k,2)
+                uu(i,j,k,2)=uu(i,j,k,2)-gradp(i,j,k,2)	!???????? Why not -dt*gradp(i,j,k,1)
              enddo
           enddo
        enddo
@@ -288,7 +546,7 @@ c       return
              do k=1,nzlocal+1,1
                 gradp(i,j,k,3)=aa*(press(i,j,k)-press(i,j,k-1))*dzi+
      &               bb*(press(i,j,k+1)-press(i,j,k-2))*dzi3
-                uu(i,j,k,3)=uu(i,j,k,3)-gradp(i,j,k,3)
+                uu(i,j,k,3)=uu(i,j,k,3)-gradp(i,j,k,3)	!???????? Why not -dt*gradp(i,j,k,1)
              enddo
           enddo
        enddo
