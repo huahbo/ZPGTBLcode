@@ -61,7 +61,7 @@ c
       module VelocityFieldSolver
       contains
       
-             subroutine SolveGravTerms(Grav_s) ! dia - define as an inbuild paramter in use modules 
+       subroutine SolveGravTerms(GravTerm_s) ! dia - define as an inbuild paramter in use modules 
        use mesh
        use properties
        use VelParameters
@@ -83,24 +83,29 @@ c
 !#endif
        
 c       double precision:: dt
-c
+       !double precision:: mu_f
 
 #ifndef TWO_D
 
-       double precision:: GravTerm(nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s)
+       double precision:: GravTerm_s(nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                    nspecis_s)
 #else
-       double precision:: GravTerm(nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s)
+       double precision:: GravTerm_s(nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                    nspecis_s)
 #endif
 
-       FluidViscosity = Reynolds/(FlowVelocity*FlowLength)  !!!!
+       !mu_f = Reynolds/(FlowVelocity*FlowLength)  !!!!  lref, tauRef, velRef, muRef
+       !mu_f = velRef*1.D0*1.D0/Reynolds
+       !write(*,*) 'Solve Vel nu=',mu_f," ",lref," ",velRef      
 !#ifdef DiFelice1994
 !#else
 !#endif 
-       GravTerm(:,:,:,:,:)=0.D0
-       GravTerm(:,:,:,3,:)=9.8D0*FlowLength/(FlowVelocity**2) ! or 9.8 = GravAcc
+       GravTerm_s(:,:,:,:,:)=0.D0
+       !GravTerm_s(:,:,:,3,:)=9.8D0*FlowLength/(FlowVelocity**2) ! or 9.8 = GravAcc
+       GravTerm_s(:,:,:,3,:)=9.8D0*lref/(velRef**2) ! or 9.8 = GravAcc
        end subroutine
 
-       subroutine SolveDragTerms(Drag_s,ux_s, ux) ! dia - define as an inbuild paramter in use modules 
+       subroutine SolveDragTerms(DragTerm_s,ux_s, ux) ! dia - define as an inbuild paramter in use modules 
        use mesh
        use properties
        use VelParameters
@@ -112,8 +117,12 @@ c
 c
        implicit none       
 c
-       double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
-       double precision:: ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar,nspecis_s)
+       integer:: i,j,k , kmax,jmax,imax , wnumb_s
+
+       double precision:: pi
+       double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,
+     &                    nvar)
+
 !#ifndef TWO_D   OR   ux can be defined as below?
 !      double precision:: uu(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)
 !       double precision:: rhsu(1:nxlocal+1,1:nylocal+1,1:nzlocal+1,3)
@@ -126,33 +135,66 @@ c       double precision:: dt
 c
 
 #ifndef TWO_D
-       double precision:: udiff(   nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s)
-       double precision:: umodsq(  nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s)
-       double precision:: Re_p(    nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s) 
-       double precision:: Cd0(     nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s)
-       double precision:: chi(     nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s) 
-       double precision:: Fdragi(  nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s) 
-       double precision:: DragTerm(nxlocal+1,nylocal+1,nzlocal+1,nvar,nspecis_s)
-                   
+       double precision:: udiff(   nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                           nspecis_s)
+       double precision:: Re_p(    nxlocal+1,nylocal+1,nzlocal+1,
+     &                           nspecis_s)
+       double precision:: Cd0(     nxlocal+1,nylocal+1,nzlocal+1,
+     &                           nspecis_s)
+       double precision:: chi(     nxlocal+1,nylocal+1,nzlocal+1,
+     &                           nspecis_s) 
+       double precision:: Fdragi(  nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                           nspecis_s) 
+       double precision:: DragTerm_s(nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                           nspecis_s)
+       double precision:: umodsq(  nxlocal+1,nylocal+1,nzlocal+1,
+     &                           nspecis_s)
+       double precision:: alpha_f(  nxlocal+1,nylocal+1,nzlocal+1,
+     &                           nspecis_s)     
        
 #else
-       double precision:: udiff(   nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s)
-       double precision:: umodsq(  nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s)
-       double precision:: Re_p(    nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s) 
-       double precision:: Cd0(     nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s)
-       double precision:: chi(     nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s) 
-       double precision:: Fdragi(  nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s) 
-       double precision:: DragTerm(nxlocal+1,nylocal,nzlocal+1,nvar,nspecis_s)
+       double precision:: udiff(   nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                           nspecis_s)
+       double precision:: Re_p(    nxlocal+1,nylocal,nzlocal+1,
+     &                           nspecis_s) 
+       double precision:: Cd0(     nxlocal+1,nylocal,nzlocal+1,
+     &                           nspecis_s)
+       double precision:: chi(     nxlocal+1,nylocal,nzlocal+1,
+     &                           nspecis_s) 
+       double precision:: Fdragi(  nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                           nspecis_s) 
+       double precision:: DragTerm_s(nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                           nspecis_s)
+       double precision:: umodsq(  nxlocal+1,nylocal,nzlocal+1,
+     &                           nspecis_s)
+       double precision:: alpha_f(  nxlocal+1,nylocal,nzlocal+1,
+     &                           nspecis_s)  
+
 #endif
-
+       double precision:: ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,
+     &                    nvar,nspecis_s)
+       
+       !integer:: nspecis_s
+       double precision:: diam_s(nspecis_s)
+       double precision:: mu_f
+       double precision:: nu_f
+       double precision:: rho_f
+       
        pi = 4.d0*datan(1.d0)
-
-       double precision:: nu
-       FluidViscosity = Reynolds/(FlowVelocity*FlowLength)  !!!!
+       
+       !nspecis_s =2
+       rho_f = 1.D0
+       !mu_f = FlowVelocity*FlowLength/Reynolds  !!!!
+       mu_f = velRef*1.D0*1.D0/Reynolds !lref = 1.D0  !rho_f = 1.D0
+       nu_f = velRef*1.D0/Reynolds 
+       diam_s(1) = 0.00001D0
+       diam_s(2) = 0.0001D0
+       
 !#ifdef DiFelice1994
 !#else
 !#endif 
        umodsq(:,:,:,:) = 0.D0
+       alpha_f(:,:,:,:) = 1.D0    !Volume fraction of fluid phase
        
        kmax = nzlocal
        jmax = nylocal
@@ -171,49 +213,83 @@ c
 !!!!!!!!OR!!!!!!!!!!
                  !umodsq(i,j,k,wnumb_s) = 0.D0 Up, In Starting 
                  
-                      udiff(i,j,k,1,wnumb_s)= uu_s(i,j,k,1,wnumb_s)-uu(i,j,k,1,wnumb_s)
+                      udiff(i,j,k,1,wnumb_s)= ux_s(i,j,k,1,wnumb_s)
+     &                                          -ux(i,j,k,wnumb_s)
                       !umodsq(i,j,k,wnumb_s) = umodsq(i,j,k,wnumb_s)+udiff(i,j,k,1,wnumb_s)*udiff(i,j,k,1,wnumb_s)
 #ifndef TWO_D                      
-                      udiff(i,j,k,2,wnumb_s)= uu_s(i,j,k,2,wnumb_s)-uu(i,j,k,2,wnumb_s)
+                      udiff(i,j,k,2,wnumb_s)= ux_s(i,j,k,2,wnumb_s)
+     &                                          -ux(i,j,k,wnumb_s)
                       !umodsq(i,j,k,wnumb_s) = umodsq(i,j,k,wnumb_s)+udiff(i,j,k,2,wnumb_s)*udiff(i,j,k,2,wnumb_s)
 #else
                       udiff(i,j,k,2,wnumb_s)= 0.D0
 #endif
-                      udiff(i,j,k,3,wnumb_s)= uu_s(i,j,k,3,wnumb_s)-uu(i,j,k,3,wnumb_s)
+                      udiff(i,j,k,3,wnumb_s)= ux_s(i,j,k,3,wnumb_s)
+     &                                          -ux(i,j,k,wnumb_s)
                       !umodsq(i,j,k,wnumb_s) = umodsq(i,j,k,wnumb_s)+udiff(i,j,k,3,wnumb_s)*udiff(i,j,k,3,wnumb_s)
-                      umodsq(i,j,k,wnumb_s) = udiff(i,j,k,1,wnumb_s)*udiff(i,j,k,1,wnumb_s)+udiff(i,j,k,2,wnumb_s)*udiff(i,j,k,2,wnumb_s)+udiff(i,j,k,3,wnumb_s)*udiff(i,j,k,3,wnumb_s)
+                      
+                      umodsq(i,j,k,wnumb_s) = udiff(i,j,k,1,wnumb_s)*
+     &                                          udiff(i,j,k,1,wnumb_s)
+     &                 +udiff(i,j,k,2,wnumb_s)*udiff(i,j,k,2,wnumb_s)
+     &                 +udiff(i,j,k,3,wnumb_s)*udiff(i,j,k,3,wnumb_s)
 
-                   Re_p(i,j,k,wnumb_s) = alpha_f(i,j,k,wnumb_s)*rho_f*diam_p(wnumb_s)*sqrt( umodsq(i,j,k,wnumb_s) )/mu_f !! Note *rho_f is constant Alternate Re_p
-                   Re_p(i,j,k,wnumb_s) = alpha_f(i,j,k,wnumb_s)*diam_p(i,j,k,wnumb_s)*sqrt( umodsq(i,j,k,wnumb_s) )* FluidViscosity
+!                   Re_p(i,j,k,wnumb_s) = alpha_f(i,j,k,wnumb_s)*rho_f*
+!     &                                          diam_s(wnumb_s)*
+!     &                            sqrt( umodsq(i,j,k,wnumb_s) )/mu_f !! Note *rho_f is constant Alternate Re_p
+                   Re_p(i,j,k,wnumb_s) = alpha_f(i,j,k,wnumb_s)*
+     &                                       diam_s(wnumb_s)*
+     &                    sqrt( umodsq(i,j,k,wnumb_s) )/nu_f
                    
-                   Cd0(i,j,k,wnumb_s) = (0.63D0+4.8D0/sqrt(Re_p(i,j,k,wnumb_s) )**2 !DallaValleDrag
-                      if Re_p(i,j,k,wnumb_s) .ge. 1000 then  !L Kanq 2006, 
+                   Cd0(i,j,k,wnumb_s) = (0.63D0+4.8D0/
+     &                               sqrt(Re_p(i,j,k,wnumb_s) )**2) !DallaValleDrag
+                   if (Re_p(i,j,k,wnumb_s) .ge. 1000) then  !L Kanq 2006, 
                          Cd0(i,j,k,wnumb_s) = 0.44 
                       else 
-                         Cd0(i,j,k,wnumb_s) = 24.0/ (1.D0+0.15D0* (Re_p(i,j,k,wnumb_s)**0.687D0)/Re_p(i,j,k,wnumb_s)! Eaton and Balachandar 2010
+                         Cd0(i,j,k,wnumb_s) = 24.D0/ 
+     &                    (1.D0+0.15D0* (Re_p(i,j,k,wnumb_s)**0.687D0)/
+     &                       Re_p(i,j,k,wnumb_s) ) ! Eaton and Balachandar 2010
                       endif
                    
-                   chi(i,j,k,wnumb_s) = 3.7D0 - 0.65D0* exp( -0.5D0* ( ( 1.5D0-log(Re_p(i,j,k,wnumb_s)) )**2) !!Not required
+                   chi(i,j,k,wnumb_s) = 3.7D0 
+     &                 - 0.65D0* exp( -0.5D0* ( ( 1.5D0-
+     &                     log(Re_p(i,j,k,wnumb_s)) )**2) ) !!Not required
                    
 !!!!!!!!!!!!!!!!!!!          
 !                   do udir= 1,3,1
 !                      Fdragi(i,j,k,udir,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*(alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k) )*udiff(i,j,k,udir,wnumb_s)*( alpha_f(i,j,k,wnumb_s)**(1+chi(i,j,k,wnumb_s)) )  !! Or
-!                      Fdragi(i,j,k,udir,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*diam_s(wnumb_s)*FluidViscosity*Re_p(i,j,k,wnumb_s)*udiff(i,j,k,udir,wnumb_s)*( alpha_f(i,j,k)**(chi(i,j,k,wnumb_s)) )
-!                      DragTerm(i,j,k,udir,wnumb_s) = Fdragi(i,j,k,udir,wnumb_s)*FlowLength/(FlowVelocity**2)
+!                      Fdragi(i,j,k,udir,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*diam_s(wnumb_s)*mu_f*Re_p(i,j,k,wnumb_s)*udiff(i,j,k,udir,wnumb_s)*( alpha_f(i,j,k)**(chi(i,j,k,wnumb_s)) )
+!                      DragTerm_s(i,j,k,udir,wnumb_s) = Fdragi(i,j,k,udir,wnumb_s)*FlowLength/(FlowVelocity**2)
 !                   enddo
 !!!!!!!!OR!!!!!!!!!!
-                      Fdragi(i,j,k,1,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*(alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k) )*udiff(i,j,k,1,wnumb_s)*( alpha_f(i,j,k,wnumb_s)**(1+chi(i,j,k,wnumb_s)) )
-                      !Fdragi(i,j,k,udir,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*diam_s(wnumb_s)*FluidViscosity*Re_p(i,j,k,wnumb_s)*udiff(i,j,k,udir,wnumb_s)*( alpha_f(i,j,k)**(chi(i,j,k,wnumb_s)) )
-                      DragTerm(i,j,k,1,wnumb_s) = Fdragi(i,j,k,1,wnumb_s)*FlowLength/(FlowVelocity**2)
+c            Fdragi(i,j,k,1,wnumb_s) = Cd0(i,j,k,wnumb_s)* 0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f* (alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k) )* udiff(i,j,k,1,wnumb_s)*( alpha_f(i,j,k,wnumb_s)**(1+chi(i,j,k,wnumb_s)) )
+                      Fdragi(i,j,k,1,wnumb_s) = Cd0(i,j,k,wnumb_s)*
+     &                   0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*
+     &               (alpha_f(i,j,k,wnumb_s)**2)*
+     &           sqrt( umodsq(i,j,k,wnumb_s) )* udiff(i,j,k,1,wnumb_s)*
+     &            ( alpha_f(i,j,k,wnumb_s)**(1.D0+chi(i,j,k,wnumb_s)) )
+                      !Fdragi(i,j,k,udir,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*diam_s(wnumb_s)*mu_f*Re_p(i,j,k,wnumb_s)*udiff(i,j,k,udir,wnumb_s)*( alpha_f(i,j,k)**(chi(i,j,k,wnumb_s)) )
+                      DragTerm_s(i,j,k,1,wnumb_s)=
+     &                      Fdragi(i,j,k,1,wnumb_s)
+     &                     *1.D0/(velRef**2) !lref = 1.D0
 #ifndef TWO_D
-                      Fdragi(i,j,k,2,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*(alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k) )*udiff(i,j,k,2,wnumb_s)*( alpha_f(i,j,k,wnumb_s)**(1+chi(i,j,k,wnumb_s)) )
-                      DragTerm(i,j,k,2,wnumb_s) = Fdragi(i,j,k,2,wnumb_s)*FlowLength/(FlowVelocity**2)
+                      Fdragi(i,j,k,2,wnumb_s) = Cd0(i,j,k,wnumb_s)*
+     &                       0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*
+     &     (alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k,wnumb_s) )*
+     &                      udiff(i,j,k,2,wnumb_s)*
+     &     ( alpha_f(i,j,k,wnumb_s)**(1.D0+chi(i,j,k,wnumb_s)) )
+                  DragTerm_s(i,j,k,2,wnumb_s) = Fdragi(i,j,k,2,wnumb_s)*
+     &                        1.D0/(velRef**2)  !lref =1.D0
 #else
                       Fdragi(i,j,k,2,wnumb_s) = 0.D0
-                      DragTerm(i,j,k,2,wnumb_s) = 0.D0
+                      DragTerm_s(i,j,k,2,wnumb_s) = 0.D0
 #endif
-                      Fdragi(i,j,k,3,wnumb_s) = Cd0(i,j,k,wnumb_s)*0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*(alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k) )*udiff(i,j,k,3,wnumb_s)*( alpha_f(i,j,k,wnumb_s)**(1+chi(i,j,k,wnumb_s)) )
-                      DragTerm(i,j,k,3,wnumb_s) = Fdragi(i,j,k,3,wnumb_s)*FlowLength/(FlowVelocity**2)
+                      Fdragi(i,j,k,3,wnumb_s) = Cd0(i,j,k,wnumb_s)*
+     &                   0.125D0*pi*(diam_s(wnumb_s)**2)*rho_f*
+     &     (alpha_f(i,j,k,wnumb_s)**2)*sqrt( umodsq(i,j,k,wnumb_s) )*
+     &                      udiff(i,j,k,3,wnumb_s)*
+     &     ( alpha_f(i,j,k,wnumb_s)**(1.D0+chi(i,j,k,wnumb_s)) )
+                  DragTerm_s(i,j,k,3,wnumb_s) = Fdragi(i,j,k,3,wnumb_s)*
+     &                      1.D0/(velRef**2)   !lref =1.D0
+     
                 enddo
              enddo
           enddo
