@@ -8,4 +8,5 @@ C
 C
         integer,parameter:: nghost=4
         integer,parameter:: nvar=3
+        integer,parameter:: nspecis_s=2
         end module mesh_uparms
