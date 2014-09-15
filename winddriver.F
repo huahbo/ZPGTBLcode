@@ -98,6 +98,9 @@ c
        implicit none
        double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
        double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI)
+       double precision:: w_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nspecis_s)
+       double precision:: ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar,
+     &                                   nspecis_s)
 c
        integer:: istart, maxiter, lastiter
        integer:: output_flag, binary_flag
@@ -171,7 +174,7 @@ c
 
        do timeStep=istart,istart+maxiter-1,1
          if(iprocx.eq.1.and.iprocy.eq.1.and.iprocz.eq.1) then
-           write(6,*) 'timeStep=',timeStep, dt, ttot
+           write(6,*) 'timeStep=',timeStep, dt, ttot !,nvar
            write(ihis,*) 'timeStep=',timeStep, dt, ttot
          endif
  
@@ -180,7 +183,7 @@ c
          call outputcodeA(ux,timestep)
 #endif
 
-         call FluidSolve(ux,px,timestep)
+         call FluidSolidSolve(ux,px,w_s, ux_s,timestep)!    call FluidSolidSolve(ux,px,sux, timestep)
          ttot=ttot+dt
 #ifdef LES
          call Diagnostics(ux,timestep,ndiag)
@@ -447,9 +450,9 @@ c
       flush(itestv5)
       flush(itestv6)
 c
-c      flush(iout01)
+      flush(iout01)
 c      flush(iout02)
-c      flush(iout03)
+cc      flush(iout03)
 c      flush(iout04)
 c      flush(iout05)
 c      flush(iout06)

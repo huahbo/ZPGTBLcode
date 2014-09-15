@@ -22,6 +22,7 @@ nonlinear.o    \
 newdt.o \
 setboundaryvaluesst.o \
 fluidsolve.o \
+fluidsolidsolve.o \
 initfluid.o \
 winddriver.o \
 output.o  \
@@ -34,7 +35,7 @@ DEBUG=
 LIST=
 
 #gfortran flags
-HDF5HOME=${HOME}/hdf5-1.6.10/hdf5
+HDF5HOME=${HOME}/hdf5-1.6.10/hdf5# opt/share/hdf5/1.6.10-gcc-openmpi-gpfs/el6/x86_64/ # 
 HDF5LIB=${HDF5HOME}/lib
 HDF5INC=${HDF5HOME}/include
 
@@ -42,11 +43,12 @@ SZIPHOME=${HOME}/szip-2.1/szip
 SZIPLIB=${SZIPHOME}/lib
 SZIPINC=${SZIPHOME}/include
 
-SILOHOME=${HOME}/silo-4.7.2
+#SILOHOME=${HOME}/silo-4.7.2
+SILOHOME=${HOME}/silo
 SILOINC=${SILOHOME}/include
 SILOLIB=${SILOHOME}/lib
 
-FFTWHOME=/mnt/kaustapps/fftw/3.2.2
+FFTWHOME=/opt/share/fftw3/3.3-openmpi-1.4.3-generic-dp/el6/x86_64#/mnt/kaustapps/fftw/3.2.2
 FFTWLIB=${FFTWHOME}/lib
 FFTWINC=${FFTWHOME}/include
 
@@ -54,15 +56,19 @@ F90= gfortran -mcmodel=medium
 
 #FFLAGS= -c -DDYNAMIC -DTWO_D -DSILO -g -frange-check -fimplicit-none -ffpe-trap=zero,overflow -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
 
-FFLAGS= -c -Wall -DLES  -DDYNAMIC -DSILO -g -frange-check -fimplicit-none -ffpe-trap=zero,overflow -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
-FFLAGS= -c -DLES -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
-FFLAGS= -c -Wall -DLES  -DDYNAMIC -DSILO -g -frange-check -fimplicit-none -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+# FFLAGS= -c -Wall -DLES  -DDYNAMIC -DSILO -g -frange-check -fimplicit-none -ffpe-trap=zero,overflow -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+#FFLAGS= -c -DLES -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+#FFLAGS= -c -Wall -DLES  -DDYNAMIC -DSILO -g -frange-check -fimplicit-none -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
 
-FFLAGS= -c -Wall -DLES  -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
-FFLAGS= -c -DLES -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+#FFLAGS= -c -Wall -DLES  -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check  -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
+#FFLAGS= -c -DLES -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC}
 
-FFLAGS= -c -Wall -Wno-unused-variable -DLES -DCODEA -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
-#FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+# FFLAGS= -c -Wall -Wno-unused-variable -DLES -DCODEA -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+
+FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+#-I${SILOINC}	-I${SILOINC}
+#FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -O  -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+
 
 F90= gfortran -mcmodel=medium
 CC= egcs
@@ -74,6 +80,7 @@ a.out: ${OBJ}
 #	${F90} -g  ${OBJ}  -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz  -L/usr/lib -lz
 #	${F90} -g  ${OBJ} -L${SILOLIB} -lsiloh5 -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz -L${FFTWLIB} -L/usr/lib64 -lz
 	${F90} -g  ${OBJ} -L${SILOLIB} -lsiloh5 -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz -L${FFTWLIB} -lfftw3 -L/usr/lib64 -lz
+#	${F90} -g  ${OBJ} -L${HDF5LIB} -lhdf5 -L${SZIPLIB} -lsz -L${FFTWLIB} -lfftw3 -L/usr/lib64 -lz
 
 
 #
@@ -97,6 +104,9 @@ exchangerecycle.o:exchangerecycle.F
 fluidsolve.o:fluidsolve.F
 	 ${F90}  ${FFLAGS} fluidsolve.F
 
+fluidsolidsolve.o:fluidsolidsolve.F
+	 ${F90}  ${FFLAGS} fluidsolidsolve.F
+	 
 hdf5_func.o: hdf5_func.c
 	gcc -c -I${HDF5INC}  -DH5_USE_16_API hdf5_func.c
 

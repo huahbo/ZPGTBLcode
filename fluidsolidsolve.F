@@ -384,42 +384,4 @@ c
 c-----------------------------------------------------------------------
 c      check divergence
 c-----------------------------------------------------------------------
-       subroutine checkdivergence(uu)
-c-----------------------------------------------------------------
-       use mesh
-       use properties
-#ifdef PARALLEL
-       use mpistuff
-#endif
 
-c
-       implicit none
-c=======Declarations=========
-       double precision:: divu(nxlocal,nylocal,nzlocal)
-c
-c       double precision:: uu(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)
-       double precision:: uu(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
-c     
-       double precision:: aa,bb
-       integer:: i,j,k
-c
-       aa=9.D0/8.D0
-       bb=-1.D0/8.D0
-c
-       do i=1,nxlocal,1
-          do j=1,nylocal,1
-             do k=1,nzlocal,1
-                divu(i,j,k)=aa*(uu(i+1,j,k,1)-uu(i,j,k,1))*dxi+
-     &               bb*(uu(i+2,j,k,1)-uu(i-1,j,k,1))*dxi3+
-#ifndef TWO_D
-     &               aa*(uu(i,j+1,k,2)-uu(i,j,k,2))*dyi+
-     &               bb*(uu(i,j+2,k,2)-uu(i,j-1,k,2))*dyi3+
-#endif
-     &               aa*(uu(i,j,k+1,3)-uu(i,j,k,3))*dzi+
-     &               bb*(uu(i,j,k+2,3)-uu(i,j,k-1,3))*dzi3
-          enddo
-       enddo
-       enddo         
-c       write(*,*) 'Check divergence :', sum(divu)
-       return
-      end 

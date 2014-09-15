@@ -22,6 +22,7 @@ nonlinear.o    \
 newdt.o \
 setboundaryvaluesst.o \
 fluidsolve.o \
+fluidsolidsolve.o \
 initfluid.o \
 winddriver.o \
 output.o  \
@@ -103,6 +104,9 @@ exchangerecycle.o:exchangerecycle.F
 fluidsolve.o:fluidsolve.F
 	 ${F90}  ${FFLAGS} fluidsolve.F
 
+fluidsolidsolve.o:fluidsolidsolve.F
+	 ${F90}  ${FFLAGS} fluidsolidsolve.F
+	 
 hdf5_func.o: hdf5_func.c
 	gcc -c -I${HDF5INC}  -DH5_USE_16_API hdf5_func.c
 

@@ -447,15 +447,15 @@ c
       flush(itestv5)
       flush(itestv6)
 c
-      flush(iout01)
-      flush(iout02)
-      flush(iout03)
-      flush(iout04)
-      flush(iout05)
-      flush(iout06)
-      flush(iout07)
-      flush(iout08)
-      flush(iout09)
+c      flush(iout01)
+c      flush(iout02)
+c      flush(iout03)
+c      flush(iout04)
+c      flush(iout05)
+c      flush(iout06)
+c      flush(iout07)
+c      flush(iout08)
+c      flush(iout09)
 c
       return
       end
