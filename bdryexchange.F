@@ -15,6 +15,46 @@ c
 c     Revision 1.1.1.1  2010/12/31 12:44:32  samtanr
 c     Wind code: 2d, 3d and low Mach number
 c
+      
+c     ================================================================
+      
+      subroutine exchangeSolid(w_s,wfields,grid_array,nfields)
+c     
+c     precondition:
+c               grid_array holds the local data to be communicated
+c               nfields holds the number of distinct fluid variables
+c     postcondition:
+c               grid_array holds the local data, post communication
+c
+c     Note: there are a number of #ifdef statements, meant to test 
+c     for directional periodicity, depending on whether processes 
+c     are on the domain boundary or not.
+c     
+      use mesh
+      use mesh_common
+#ifdef PARALLEL
+      use mpistuff
+#endif
+      
+      integer :: nfields
+      integer :: wfields
+      double precision,dimension(IXLO:IXHI,IYLO:IYHI,IZLO:IZHI,nfields
+     &                           ,nspecis_s)       
+     &     :: grid_array
+      double precision,dimension(IXLO:IXHI,IYLO:IYHI,IZLO:IZHI,wfields
+     &                           ,nspecis_s) 
+     &     :: w_s     
+      integer :: snumb_s
+     
+      do snumb_s =1,nspecis_s,1
+         call exchange(w_s(:,:,:,:,snumb_s),1)   !!??? wfields=1 should work
+         call exchange(grid_array(:,:,:,:,snumb_s),nvar)
+      enddo
+
+      return
+      end subroutine exchangeSolid
+c-----------------------------------------------------------------------
+      
 c-----------------------------------------------------------------
       integer function iprocnum(ipx, ipy, ipz)
 c     
