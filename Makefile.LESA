@@ -22,7 +22,6 @@ nonlinear.o    \
 newdt.o \
 setboundaryvaluesst.o \
 fluidsolve.o \
-fluidsolidsolve.o \
 initfluid.o \
 winddriver.o \
 output.o  \
@@ -65,7 +64,10 @@ F90= gfortran -mcmodel=medium
 
 # FFLAGS= -c -Wall -Wno-unused-variable -DLES -DCODEA -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -fbounds-check -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
 
-FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -g -frange-check -fimplicit-none -ffpe-trap=zero,overflow -fbounds-check -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+
+#FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -O -I${SILOINC} -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
+
 #-I${SILOINC}	-I${SILOINC}
 #FFLAGS= -c -DLES -DCODEA -DDYNAMIC -DHDF5 -O  -I${HDF5INC} -I${SZIPINC} -I${FFTWINC}
 
@@ -104,8 +106,8 @@ exchangerecycle.o:exchangerecycle.F
 fluidsolve.o:fluidsolve.F
 	 ${F90}  ${FFLAGS} fluidsolve.F
 
-fluidsolidsolve.o:fluidsolidsolve.F
-	 ${F90}  ${FFLAGS} fluidsolidsolve.F
+#fluidsolidsolve.o:fluidsolidsolve.F
+#	 ${F90}  ${FFLAGS} fluidsolidsolve.F
 	 
 hdf5_func.o: hdf5_func.c
 	gcc -c -I${HDF5INC}  -DH5_USE_16_API hdf5_func.c
