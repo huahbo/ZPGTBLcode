@@ -190,6 +190,7 @@ c
      
        do snumb_s =1,nspecis_s,1
           !call outflow(w_s(:,:,:,snumb),substep)  ?????
+          call outflow_w_s(w_s(:,:,:,snumb_s),substep)  
           call outflow(ux_s(:,:,:,:,snumb_s),substep)
        enddo
 c
@@ -198,7 +199,7 @@ c
 c-----------------------------------------------------------------------------
 
 c-----------------------------------------------------------------------------
-       subroutine outflow_w_s(w_s,substep)
+       subroutine outflow_w_s(wn_s,substep)
        use mesh
        use mesh_common
        use properties
