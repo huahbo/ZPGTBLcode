@@ -43,6 +43,8 @@ c=======Declarations=========
        !For Solid Phase
        double precision:: w_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nspecis_s)  !or sux, also one more paramter of sand speciese number ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar, speciesNumber)        
        double precision:: wp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nspecis_s) 
+       !double precision:: wtemp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI) 
+
 c
 
 #ifndef TWO_D
@@ -61,8 +63,14 @@ c   !For Solid Phase
 #endif
        integer:: i,j,k, timestep, substep, snumb_s
 c
-       !call SetboundaryValuesST(w_s)	!(sux)
-       !call exchange(w_s,1)	!(sux,3)
+       do snumb_s =1,nspecis_s,1
+          !wtemp_s(:,:,:) = w_s(:,:,:,snumb_s)
+          call SetboundaryValuesST_w_s(w_s(:,:,:,snumb_s))	!(sux)    Later
+          call exchange(w_s(:,:,:,snumb_s),1)	!(sux,3)    Later 
+       enddo
+       
+       !call SetboundaryValuesST(w_s)	!(sux)    Later
+       !call exchange(w_s,1)	!(sux,3)    Later 
 c     Solve x-momentum equation
 c     u-velocity rhs
        do snumb_s =1,nspecis_s,1
@@ -80,9 +88,13 @@ c setting boundary
        !wtmp_s = w_s
        !call les_virtualwall(wtmp,timestep,substep)    !consider later
 #endif
-
-       !call SetboundaryValuesST(wp_s)		! ???LATER
-       !call exchange(wp_s,1)			! ???LATER
+       do snumb_s =1,nspecis_s,1
+          !wtemp_s(:,:,:) = wp_s(:,:,:,snumb_s)
+          call SetboundaryValuesST_w_s(wp_s(:,:,:,snumb_s))	!(sux)    Later
+          call exchange(wp_s(:,:,:,snumb_s),1)	!(sux,3)    Later 
+          !call SetboundaryValuesST(wp_s)		! ???LATER
+          !call exchange(wp_s,1)			! ???LATER
+       enddo
 c
        !call computeLu(Lu,ux,uxp,alpha,beta)	!Remove as computes linear part of Eq3 and Of no use in fluid phase also...
 
@@ -141,8 +153,12 @@ c   !For Solid Phase
 #endif
        integer:: i,j,k, timestep, substep, snumb_s
 c
-       !call SetboundaryValuesST(ux_s)	!(sux)
-       !call exchange(ux_s,3)	!(sux,3)
+       do snumb_s =1,nspecis_s,1
+          call SetboundaryValuesST(ux_s(:,:,:,:,snumb_s))	!(sux)    Later
+          call exchange(ux_s(:,:,:,:,snumb_s),3)	!(sux,3)    Later 
+          !call SetboundaryValuesST(ux_s)	!(sux)
+          !call exchange(ux_s,3)	!(sux,3)
+       enddo
 c     Solve x-momentum equation
 c     u-velocity rhs
        do snumb_s =1,nspecis_s,1
@@ -198,9 +214,12 @@ c setting boundary
        !utmp = ux
        !call les_virtualwall(utmp,timestep,substep)    !consider later
 #endif
-
+       do snumb_s =1,nspecis_s,1
+          call SetboundaryValuesST(uxp_s(:,:,:,:,snumb_s))	!(sux)    Later
+          call exchange(uxp_s(:,:,:,:,snumb_s),3)	!(sux,3)    Later 
        !call SetboundaryValuesST(uxp_s)		! ???LATER
        !call exchange(uxp_s,3)			! ???LATER
+       enddo
 c
        !call computeLu(Lu,ux,uxp,alpha,beta)	!Remove as computes linear part of Eq3 and Of no use in fluid phase also...
 

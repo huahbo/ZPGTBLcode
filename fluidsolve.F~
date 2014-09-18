@@ -1,0 +1,606 @@
+c-----------------------------------------------------------------
+c     Ravi Samtaney
+c     Copyright 2011
+c     King Abdullah University of Science and Technology
+c     All Rights Reserved
+c-----------------------------------------------------------------
+
+c     Revision 1.8  2014/05/22 15:30:00  rahmanmm
+c     Original source.
+c
+c     $Log: fluidsolve.F,v $
+c     Revision 1.7  2011/11/05 13:55:06  chengw
+c     *** empty log message ***
+c
+c     Revision 1.6  2011/10/19 15:14:49  samtanr
+c     Added 2D option via TWO_D defines.
+c
+c     Revision 1.5  2011/10/08 13:39:38  samtanr
+c     Added conditionals to not write tmp files in parallel.
+c
+c     Revision 1.4  2011/10/07 13:17:54  samtanr
+c     Update of uxp etc. in linear.
+c
+c     Revision 1.3  2011/10/03 08:32:30  samtanr
+c     Removed extra zero initialization of adup and lup.
+c
+c     Revision 1.2  2011/10/03 08:18:29  samtanr
+c     Intermediate checkin.
+c
+c     Revision 1.1  2011/07/25 11:32:01  samtanr
+c     Original source.
+c
+c     Wind code: Incompressible Navier-Stokes LES
+
+c-----------------------------------------------------------------
+       subroutine FluidSolidSolve(ux, px, w_s, ux_s,timestep)  !!! Remove the px, ! Replace ux -> wux !!SolidSolve(wux,timestep)
+c-----------------------------------------------------------------
+       use mesh
+       use mesh_common
+       use time
+       use properties
+       use iounits
+       use stats
+#ifdef PARALLEL
+       use mpistuff
+#endif
+       use RKCoefficients
+c
+       implicit none
+c=======Declarations=========
+       double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+
+       double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI)
+       integer:: timestep
+       
+       double precision:: ux_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,
+     &                                   nvar, nspecis_s)	!ux -> !! wux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       
+       double precision:: w_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,
+     &                                   nspecis_s)
+       double precision:: wp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,
+     &                                     nspecis_s)
+       double precision:: wpp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,
+     &                                   nspecis_s)
+       
+       !double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI)		!! Remove px
+       !integer:: timestep						! Can be done
+c
+c     RK intermediate stages solution
+       double precision:: uxp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: uxpp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: utmp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+c
+       double precision:: wforce(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+c
+
+c
+c     RK intermediate stages solution for Solid phase
+       double precision:: uxp_s(IXLO:IXHI,IYLO:IYHI,IZLO:IZHI,nvar,
+     &                                   nspecis_s)	!uxp -> wuxp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: uxpp_s(IXLO:IXHI,IYLO:IYHI,IZLO:IZHI,
+     &                              nvar,nspecis_s)    !uxpp -> wuxpp
+
+c       double precision:: utmp_s(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar,
+c     &                                   nspecis_s) !utmp -> wutmp
+c
+c       double precision:: wforce_s(nxlocal+1,nylocal+1,nzlocal+1,nvar) !Consider wind turbine force at various locations by solid phase later
+c
+
+#ifndef TWO_D
+       double precision:: Adu(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Adup(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Ads(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+c
+       double precision:: Lu(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Lup(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: gradp(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+#else
+       double precision:: Adu(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Adup(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Ads(nxlocal+1,nylocal,nzlocal+1,nvar)
+c
+       double precision:: Lu(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Lup(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: gradp(nxlocal+1,nylocal,nzlocal+1,nvar)
+#endif
+c
+c For Solid phase
+#ifndef TWO_D
+       double precision:: Adu_s(nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                                   nspecis_s)	!Adu -> Adu_s  or Adwu
+       double precision:: Adup_s(nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                                   nspecis_s)	!Adup -> Adup_s or Adwup
+       double precision:: Ads_s(nxlocal+1,nylocal+1,nzlocal+1,nvar,
+     &                                   nspecis_s)	!Ads -> Ads_s  or Adws
+       double precision:: Div_s(nxlocal+1,nylocal+1,nzlocal+1,
+     &                                   nspecis_s)	!Ads -> Ads_s  or Adws
+c
+       !double precision:: Lu(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!! Remove 
+       !double precision:: Lup(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!! Remove 
+       !double precision:: gradp(nxlocal+1,nylocal+1,nzlocal+1,nvar)	!! Remove 
+#else
+       double precision:: Adu_s(nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                                   nspecis_s)		!Adu -> Adwu
+       double precision:: Adup_s(nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                                   nspecis_s)	!Adup -> Adwup	
+       double precision:: Ads_s(nxlocal+1,nylocal,nzlocal+1,nvar,
+     &                                   nspecis_s)		!Ads -> Ads
+       double precision:: Div_s(nxlocal+1,nylocal,nzlocal+1,
+     &                                   nspecis_s)	!Ads -> Ads_s  or Adws
+c
+       !double precision:: Lu(nxlocal+1,nylocal,nzlocal+1,nvar)		!! Remove
+       !double precision:: Lup(nxlocal+1,nylocal,nzlocal+1,nvar)
+       !double precision:: gradp(nxlocal+1,nylocal,nzlocal+1,nvar)
+#endif
+c
+
+
+
+c----------------- Stage before RK : Rescaling inflow-------------------
+#ifdef CODEA
+       if(ttot.lt. 250.d0) then
+           Tave = 10.d0
+       endif
+       if(ttot.gt. 250.d0 .and. ttot.lt.350.d0)then
+          Tave = 100.d0
+       endif 
+       if(ttot.gt.350.d0) then
+          Tave = 100.d0 + ttot - 350.d0
+       endif
+       call setinflow(ux,timestep)  
+#endif 
+#ifdef CODEB
+       if(iprocx.eq.1) call readinflowB(timestep)
+#endif
+
+c----------------- Stage  RK -------------------------------------------
+       call SetBoundaryValuesST(ux)
+       call exchange(ux,nvar)
+       gradp=0.D0
+       Lu=0.D0
+       Lup=0.D0
+       Adu=0.D0
+       Adup=0.D0
+       Ads=0.D0
+       uxp=ux
+       uxpp=ux
+c
+c       write(6,*) 'Fluid solve dt=',dt, beta(1), Reynolds
+c
+c----------------- Stage  RK for Solid Phase-------------------------------------------
+       call SetBoundaryValuesST(ux_s)
+       call exchange(ux_s,nvar)
+       !gradp=0.D0	!Not Required
+       !Lu=0.D0
+       !Lup=0.D0
+       Adu_s=0.D0
+       Adup_s=0.D0
+       Ads_s=0.D0
+       uxp_s=ux_s
+       uxpp_s=ux_s
+
+c----------------- Stage 1 of RK-----------------------------------------
+       call ComputeAdvectionTerms(Adu,ux)               
+#ifdef LES
+c       call fftnonlinear(Adu)
+       utmp = ux
+       call sgsnonlinear(Adu,utmp,timestep)
+#endif
+       Ads=Adu*gamma(1)
+#ifdef TURBINE
+       utmp = ux
+       call windforce(utmp,wforce,timestep,1)
+       Ads = Ads + wforce
+#endif
+       call outflow(ux,1)
+       call ComputeLinearTerms(Lu,gradp,ux,uxp,Ads,px,
+     &                         alpha(1),beta(1),dt,timestep,1)
+       call SetBoundaryValuesST(uxp)
+       call exchange(uxp,nvar)
+c
+c
+c      check
+c       write(6,*)'Min/max Adu',maxval(Adu(:,:,:,1)),minval(Adu(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lu(:,:,:,1)),minval(Lu(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+
+c----------------- Stage 1 of RK for Solid phase-----------------------------------------
+       call ComputeAdvectionTermsSolid(Adu_s,ux_s)            ! Adu is advection of u for intermediate v* i.e. ux
+       
+#ifdef DRAG_S
+       call ComputeDragTerms(Drag_s,ux_s, ux)  		!Compute this and call this in ComputeLinearSolidTerms
+       Adu_s = Adu_s-Drag_s
+#endif
+#ifdef GRAV_S
+       call ComputeGravTerms(Grav_s)		!Froudes Number;   No ux_s
+       Adu_s = Adu_s-Grav_s
+#endif
+           
+c       !AduDragGrav_s = Adu_s-Drag_s-ComputeGravTerms
+           
+#ifdef LES
+c       call fftnonlinear(Adu)			!Already commented ??
+       !sutmp = sux				!Not required as for subgridscale model not for Solid phase
+c       !call sgsnonlinear(Adsu,sutmp,timestep)	!Remove: No subgridscale model for Solid phase
+#endif
+       Ads_s=Adu_s*gamma(1)
+c       !AdsDragGrav_s=AduDragGrav_s*gamma(1)
+#ifdef TURBINE
+       !sutmp = sux					!Temporary paramter for wind forces
+       !call windforce(sutmp,swforce,timestep,1)	!Consider solid effect on wind turbine at various locations, Later...
+c       !Ads_s = Ads_s + swforce			! Later, Consider this Wind force term by wind turbine.
+#endif
+
+       call outflowSolid(w_s, ux_s,1)
+c       			! Will consider the outflow BCs for solid later
+c       !call outflow(w_s,1)
+c       !call outflow(ux,1)
+c       !call ComputeLinearSolidTerms(Lu,gradp,ux,uxp,Ads,px,	! Editing it...
+c     !&                         alpha(1),beta(1),dt,timestep,1) !Remove the compute of Linear part of Eq(3)
+c      ! Lu, gradp, px, alpha, beta not required... uxp is the intermediate velocity
+c      !!! call ComputeDragTerms(Adup_s,uxp_s)  inside ComputeLinearSolidTerms(Adu_s,ux_s) but we need fluid cvelocity c too...
+
+c
+       call ComputeLinearTermsSolid(uxp_s,ux_s,Ads_s,  
+     &                         dt,timestep,1)
+c	!! No need: ux_s,uxp_s,Adu_s     
+       call SetBoundaryValuesST(uxp_s) 		!Later Bounadary Conditions: ground wall + other BCs
+       call exchange(uxp_s,nvar)				!Later for MPI: Parallel computation
+       !! Number Density Part
+       call ComputeDivergenceContinuitySolid(Div_s,uxp_s,w_s)
+       Div_s= Div_s*gamma(1)
+       
+       call ComputeWeightsSolid(wp_s, w_s, Div_s,
+     &                        dt,timestep,1)
+c
+c------------------Stage 2 of RK----------------------------------------
+       gradp=0.D0
+       call ComputeAdvectionTerms(Adup,uxp)
+#ifdef LES
+c       call fftnonlinear(Adup)
+       utmp = uxp
+       call sgsnonlinear(Adup,utmp,timestep)
+#endif
+       Ads=Adu*zeta(1)+Adup*gamma(2)
+#ifdef TURBINE
+       utmp = uxp
+       call windforce(utmp,wforce,timestep,2)
+       Ads = Ads + wforce
+#endif
+       call outflow(uxp,2)
+       call ComputeLinearTerms(Lup,gradp,uxp,uxpp,Ads,px,
+     &                         alpha(2),beta(2),dt,timestep,2)
+       call SetBoundaryValuesST(uxpp)
+       call exchange(uxpp,nvar)
+c       write(6,*)'Min/max Adu',
+c     &      maxval(Adup(:,:,:,1)),minval(Adup(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lup(:,:,:,1)),minval(Lup(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+c------------------Stage 2 of RK for Solid phase----------------------------------------
+       !gradp=0.D0
+       call ComputeAdvectionTermsSolid(Adup_s,uxp_s)    ! Adup is for intermediate v* i.e. uxp 
+#ifdef DRAG_S
+       call ComputeDragTerms(Drag_s,uxp_s, uxp)  		!Compute this and call this in ComputeLinearSolidTerms
+       Adup_s = Adup_s-Drag_s
+#endif
+#ifdef GRAV_S
+       call ComputeGravTerms(Grav_s)		!Froude Number s
+       Adup_s = Adup_s-Grav_s
+#endif
+ 
+#ifdef LES
+c       call fftnonlinear(Adup)
+       !sutmp = suxp
+       !call sgsnonlinear(Adup,utmp,timestep)	!Remove: No subgridscale model
+#endif
+       Ads_s=Adu_s*zeta(1)+Adup_s*gamma(2)
+#ifdef TURBINE
+       !utmp = uxp        !Temporary paramter for wind forces
+       !call windforce(utmp,wforce,timestep,2)		!Consider solid effect on wind turbine at various locations, Later...
+       !Ads_s = Ads_s + wforce			! Later, Consider this Wind force term by wind turbine.
+#endif
+       call outflowSolid(wp_s, uxp_s,2)
+c			! Will consider the outflow BCs for solid later
+c       !call outflow(uxp_s,2)       
+c       !call ComputeLinearTerms(Lup,gradp,uxp,uxpp,Ads,px, !Remove
+c     !&                         alpha(2),beta(2),dt,timestep,2)  !As computes the Linear part of Eq(3)
+c     !!! call ComputeDragTerms(Adup_s,uxp_s)  inside ComputeAdvectionTerms(Adu_s,ux_s) but we need fluid velocity too...
+       call ComputeLinearTermsSolid(uxpp_s,uxp_s,Ads_s,  !! No need: ux_s,uxp_s,Adu_s
+     &                         dt,timestep,2)
+       
+       call SetBoundaryValuesST(uxpp_s)		!Later Bounadary Conditions: ground wall + other BCs
+       call exchange(uxpp_s,nvar)			!Later for MPI: Parallel computation
+       
+       call ComputeDivergenceContinuitySolid(Div_s,uxpp_s,wp_s)
+       Div_s= Div_s*gamma(1)
+       
+       call ComputeWeightsSolid(wpp_s, wp_s, Div_s,
+     &                        dt,timestep,2)
+       
+c
+c-------------------Stage 3 of RK---------------------------------------
+       gradp = 0.d0
+       call ComputeAdvectionTerms(Adu,uxpp)
+#ifdef LES
+c       call fftnonlinear(Adu)
+       utmp = uxpp
+       call sgsnonlinear(Adu,utmp,timestep)
+#endif
+       Ads=Adup*zeta(2)+Adu*gamma(3)  
+#ifdef TURBINE
+       utmp = uxpp
+       call windforce(utmp,wforce,timestep,3)
+       Ads = Ads + wforce
+#endif
+       call outflow(uxpp,3)
+       call ComputeLinearTerms(Lu,gradp,uxpp,ux,Ads,px,
+     &                         alpha(3),beta(3),dt,timestep,3)
+       call SetBoundaryValuesST(ux)
+       call exchange(ux,nvar)
+c       write(6,*)'Min/max Adu',maxval(Adu(:,:,:,1)),minval(Adu(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lu(:,:,:,1)),minval(Lu(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+
+c-------------------Stage 3 of RK for Solid phase---------------------------------------
+       !gradp = 0.d0
+       call ComputeAdvectionTermsSolid(Adu_s,uxpp_s)    ! Adu is for intermediate v* i.e. uxpp
+#ifdef DRAG_S
+       call ComputeDragTerms(Drag_s,uxpp_s, uxpp)  		!Compute this and call this in ComputeLinearSolidTerms
+       Adu_s = Adu_s-Drag_s
+#endif
+#ifdef GRAV_S
+       call ComputeGravTerms(Grav_s)		!Froude Number s
+       Adu_s = Adu_s-Grav_s
+#endif
+#ifdef LES
+c       call fftnonlinear(Adu_s)
+c       !utmp = uxpp
+c       !call sgsnonlinear(Adu,utmp,timestep) 	!Remove: No subgridscale model
+#endif
+       Ads_s=Adup_s*zeta(2)+Adu_s*gamma(3)  
+#ifdef TURBINE
+c       !utmp = uxpp_s       !Temporary paramter for wind forces      
+c       !call windforce(utmp,wforce,timestep,3) 	!Consider solid effect on wind turbine at various locations, Later...
+c       !Ads_s = Ads_s + wforce		! Later, Consider this Wind force term by wind turbine.
+#endif
+       call outflowSolid(wpp_s, uxpp_s,3)
+       !call outflow(uxpp_s,3)
+       call ComputeLinearTermsSolid(ux_s,uxpp_s,Ads_s,  !! No need: ux_s,uxp_s,Adu_s
+     &                         dt,timestep,3)
+     
+c      print *, "a"
+c       call ComputeLinearTerms(Lu,gradp,uxpp,ux,Ads,px,  !Remove
+c     &                         alpha(3),beta(3),dt,timestep,3)  !As computes the Linear part of Eq(3)
+
+
+       call SetBoundaryValuesST(ux_s) 		!Later Bounadary Conditions: ground wall + other BCs
+       call exchange(ux_s,nvar)		!Later for MPI: Parallel computation
+
+       call ComputeDivergenceContinuitySolid(Div_s,ux_s,wpp_s)
+       Div_s= Div_s*gamma(1)
+       
+       call ComputeWeightsSolid(w_s, wp_s, Div_s,
+     &                        dt,timestep,3)
+
+
+
+c       write(6,*)'Min/max Adu',maxval(Adu(:,:,:,1)),minval(Adu(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lu(:,:,:,1)),minval(Lu(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+c
+       call checkdivergence(ux_s)
+c
+       return
+       end
+c     
+c-----------------------------------------------------------------------
+c
+c-----------------------------------------------------------------
+       subroutine FluidSolve(ux,px,timestep)
+c-----------------------------------------------------------------
+       use mesh
+       use mesh_common
+       use time
+       use properties
+       use iounits
+       use stats
+#ifdef PARALLEL
+       use mpistuff
+#endif
+       use RKCoefficients
+c
+       implicit none
+c=======Declarations=========
+       double precision:: ux(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: px(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI)
+       integer:: timestep
+c
+c     RK intermediate stages solution
+       double precision:: uxp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: uxpp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+       double precision:: utmp(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+c
+       double precision:: wforce(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+c
+#ifndef TWO_D
+       double precision:: Adu(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Adup(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Ads(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+c
+       double precision:: Lu(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: Lup(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+       double precision:: gradp(nxlocal+1,nylocal+1,nzlocal+1,nvar)
+#else
+       double precision:: Adu(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Adup(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Ads(nxlocal+1,nylocal,nzlocal+1,nvar)
+c
+       double precision:: Lu(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: Lup(nxlocal+1,nylocal,nzlocal+1,nvar)
+       double precision:: gradp(nxlocal+1,nylocal,nzlocal+1,nvar)
+#endif
+c
+
+c----------------- Stage before RK : Rescaling inflow-------------------
+#ifdef CODEA
+       if(ttot.lt. 250.d0) then
+           Tave = 10.d0
+       endif
+       if(ttot.gt. 250.d0 .and. ttot.lt.350.d0)then
+          Tave = 100.d0
+       endif 
+       if(ttot.gt.350.d0) then
+          Tave = 100.d0 + ttot - 350.d0
+       endif
+       call setinflow(ux,timestep)  
+#endif 
+#ifdef CODEB
+       if(iprocx.eq.1) call readinflowB(timestep)
+#endif
+
+c----------------- Stage  RK -------------------------------------------
+       call SetBoundaryValuesST(ux)
+       call exchange(ux,nvar)
+       gradp=0.D0
+       Lu=0.D0
+       Lup=0.D0
+       Adu=0.D0
+       Adup=0.D0
+       Ads=0.D0
+       uxp=ux
+       uxpp=ux
+c
+c       write(6,*) 'Fluid solve dt=',dt, beta(1), Reynolds
+c
+c----------------- Stage 1 of RK-----------------------------------------
+       call ComputeAdvectionTerms(Adu,ux)               
+#ifdef LES
+c       call fftnonlinear(Adu)
+       utmp = ux
+       call sgsnonlinear(Adu,utmp,timestep)
+#endif
+       Ads=Adu*gamma(1)
+#ifdef TURBINE
+       utmp = ux
+       call windforce(utmp,wforce,timestep,1)
+       Ads = Ads + wforce
+#endif
+       call outflow(ux,1)
+       call ComputeLinearTerms(Lu,gradp,ux,uxp,Ads,px,
+     &                         alpha(1),beta(1),dt,timestep,1)
+       call SetBoundaryValuesST(uxp)
+       call exchange(uxp,nvar)
+c
+c
+c      check
+c       write(6,*)'Min/max Adu',maxval(Adu(:,:,:,1)),minval(Adu(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lu(:,:,:,1)),minval(Lu(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+c------------------Stage 2 of RK----------------------------------------
+       gradp=0.D0
+       call ComputeAdvectionTerms(Adup,uxp)
+#ifdef LES
+c       call fftnonlinear(Adup)
+       utmp = uxp
+       call sgsnonlinear(Adup,utmp,timestep)
+#endif
+       Ads=Adu*zeta(1)+Adup*gamma(2)
+#ifdef TURBINE
+       utmp = uxp
+       call windforce(utmp,wforce,timestep,2)
+       Ads = Ads + wforce
+#endif
+       call outflow(uxp,2)
+       call ComputeLinearTerms(Lup,gradp,uxp,uxpp,Ads,px,
+     &                         alpha(2),beta(2),dt,timestep,2)
+       call SetBoundaryValuesST(uxpp)
+       call exchange(uxpp,nvar)
+c       write(6,*)'Min/max Adu',
+c     &      maxval(Adup(:,:,:,1)),minval(Adup(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lup(:,:,:,1)),minval(Lup(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+c-------------------Stage 3 of RK---------------------------------------
+       gradp = 0.d0
+       call ComputeAdvectionTerms(Adu,uxpp)
+#ifdef LES
+c       call fftnonlinear(Adu)
+       utmp = uxpp
+       call sgsnonlinear(Adu,utmp,timestep)
+#endif
+       Ads=Adup*zeta(2)+Adu*gamma(3)  
+#ifdef TURBINE
+       utmp = uxpp
+       call windforce(utmp,wforce,timestep,3)
+       Ads = Ads + wforce
+#endif
+       call outflow(uxpp,3)
+       call ComputeLinearTerms(Lu,gradp,uxpp,ux,Ads,px,
+     &                         alpha(3),beta(3),dt,timestep,3)
+       call SetBoundaryValuesST(ux)
+       call exchange(ux,nvar)
+c       write(6,*)'Min/max Adu',maxval(Adu(:,:,:,1)),minval(Adu(:,:,:,1))
+c       write(6,*) 'Min/max Lu',maxval(Lu(:,:,:,1)),minval(Lu(:,:,:,1))
+c       write(6,*) 'Min/max gradp',maxval(gradp(:,:,:,1)),
+c     &      minval(gradp(:,:,:,1)), maxval(dabs(gradp(:,:,:,3)))
+c
+c
+       call checkdivergence(ux)
+c
+       return
+       end
+c     
+c-----------------------------------------------------------------------
+c      check divergence
+c-----------------------------------------------------------------------
+       subroutine checkdivergence(uu)
+c-----------------------------------------------------------------
+       use mesh
+       use properties
+#ifdef PARALLEL
+       use mpistuff
+#endif
+
+c
+       implicit none
+c=======Declarations=========
+       double precision:: divu(nxlocal,nylocal,nzlocal)
+c
+c       double precision:: uu(-2:nxlocal+3,-2:nylocal+3,-2:nzlocal+3,3)
+       double precision:: uu(IXLO:IXHI,IYLO:IYHI, IZLO:IZHI,nvar)
+c     
+       double precision:: aa,bb
+       integer:: i,j,k
+c
+       aa=9.D0/8.D0
+       bb=-1.D0/8.D0
+c
+       do i=1,nxlocal,1
+          do j=1,nylocal,1
+             do k=1,nzlocal,1
+                divu(i,j,k)=aa*(uu(i+1,j,k,1)-uu(i,j,k,1))*dxi+
+     &               bb*(uu(i+2,j,k,1)-uu(i-1,j,k,1))*dxi3+
+#ifndef TWO_D
+     &               aa*(uu(i,j+1,k,2)-uu(i,j,k,2))*dyi+
+     &               bb*(uu(i,j+2,k,2)-uu(i,j-1,k,2))*dyi3+
+#endif
+     &               aa*(uu(i,j,k+1,3)-uu(i,j,k,3))*dzi+
+     &               bb*(uu(i,j,k+2,3)-uu(i,j,k-1,3))*dzi3
+          enddo
+       enddo
+       enddo         
+c       write(*,*) 'Check divergence :', sum(divu)
+       return
+      end 

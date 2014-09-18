@@ -190,6 +190,7 @@ c
      
        do snumb_s =1,nspecis_s,1
           !call outflow(w_s(:,:,:,snumb),substep)  ?????
+          call outflow_w_s(w_s(:,:,:,snumb_s),substep)  
           call outflow(ux_s(:,:,:,:,snumb_s),substep)
        enddo
 c
@@ -198,7 +199,7 @@ c
 c-----------------------------------------------------------------------------
 
 c-----------------------------------------------------------------------------
-       subroutine outflow_w_s(w_s,substep)
+       subroutine outflow_w_s(wn_s,substep)
        use mesh
        use mesh_common
        use properties
@@ -270,7 +271,8 @@ c
          do k=IZLO,IZHI,1
             do j=IYLO,IYHI,1
              bc_outflow_w_s(1,j,k)=bc_outflow_s(j,k)
-             bc_outflow_w_s(2,j,k)=2.D0*bc_outflow_w_s(1,j,k)-wn_s(i,j,k)  !un->wn_s
+             bc_outflow_w_s(2,j,k)=2.D0*bc_outflow_w_s(1,j,k)
+     &                              -wn_s(i,j,k)  !un->wn_s
              bc_outflow_w_s(3,j,k)=
      &         4.d0*(wn_s(i,j,k)+bc_outflow_w_s(2,j,k)) 
      &              -wn_s(i-1,j,k)-6.d0*bc_outflow_w_s(1,j,k)
