@@ -61,8 +61,8 @@ c   !For Solid Phase
 #endif
        integer:: i,j,k, timestep, substep, snumb_s
 c
-       call SetboundaryValuesST(w_s)	!(sux)
-       call exchange(w_s,1)	!(sux,3)
+       !call SetboundaryValuesST(w_s)	!(sux)
+       !call exchange(w_s,1)	!(sux,3)
 c     Solve x-momentum equation
 c     u-velocity rhs
        do snumb_s =1,nspecis_s,1
@@ -81,8 +81,8 @@ c setting boundary
        !call les_virtualwall(wtmp,timestep,substep)    !consider later
 #endif
 
-       call SetboundaryValuesST(wp_s)		! ???LATER
-       call exchange(wp_s,1)			! ???LATER
+       !call SetboundaryValuesST(wp_s)		! ???LATER
+       !call exchange(wp_s,1)			! ???LATER
 c
        !call computeLu(Lu,ux,uxp,alpha,beta)	!Remove as computes linear part of Eq3 and Of no use in fluid phase also...
 
@@ -141,8 +141,8 @@ c   !For Solid Phase
 #endif
        integer:: i,j,k, timestep, substep, snumb_s
 c
-       call SetboundaryValuesST(ux_s)	!(sux)
-       call exchange(ux_s,3)	!(sux,3)
+       !call SetboundaryValuesST(ux_s)	!(sux)
+       !call exchange(ux_s,3)	!(sux,3)
 c     Solve x-momentum equation
 c     u-velocity rhs
        do snumb_s =1,nspecis_s,1
@@ -199,8 +199,8 @@ c setting boundary
        !call les_virtualwall(utmp,timestep,substep)    !consider later
 #endif
 
-       call SetboundaryValuesST(uxp_s)		! ???LATER
-       call exchange(uxp_s,3)			! ???LATER
+       !call SetboundaryValuesST(uxp_s)		! ???LATER
+       !call exchange(uxp_s,3)			! ???LATER
 c
        !call computeLu(Lu,ux,uxp,alpha,beta)	!Remove as computes linear part of Eq3 and Of no use in fluid phase also...
 
